@@ -202,6 +202,18 @@ function onDrop(key: string, event: DragEvent): void {
   /* 只允许纵向滚动（月视图内容比卡片高时才滚动），横向永不滚动 */
   overflow-x: hidden;
   overflow-y: auto;
+  /* 视图切换：整块淡入（与周视图同一节奏；任务更新时不会重播） */
+  animation: calendar-view-in var(--duration-base) var(--ease-out);
+}
+
+/* 与周视图同名的切换动效（组件作用域内独立声明，避免跨组件依赖） */
+@keyframes calendar-view-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .month-grid {
@@ -233,6 +245,11 @@ function onDrop(key: string, event: DragEvent): void {
   background: var(--column-bg);
   cursor: pointer;
   overflow: hidden;
+  /* 底色 / 上边缘色 / 悬停叠加层都平滑过渡，选中与日期类型切换不再突然跳变 */
+  transition:
+    background-color var(--duration-base) var(--ease-standard),
+    border-top-color var(--duration-base) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard);
 }
 
 /* 最后一列不画右线（由面板边框收口）；第一行不画上线（由表头下边框收口） */
@@ -261,42 +278,35 @@ function onDrop(key: string, event: DragEvent): void {
 }
 
 /**
- * 选中日期：用伪元素绘制覆盖整格的直角描边（与周视图同款）。
- * pointer-events: none 不遮挡日期格内的点击；不使用圆角，与网格线风格统一。
+ * 选中日期 / 键盘焦点 / 拖拽落点：统一用一个**常驻**伪元素绘制覆盖整格的直角描边
+ * （与周视图同款）。pointer-events: none 不遮挡日期格内的点击；
+ * 只用 opacity 过渡显隐，不改尺寸，因此格宽与描边位置不会因动画而错位。
  */
-.month-cell.is-selected::after {
+.month-cell::after {
   content: '';
   position: absolute;
   inset: 0;
   border: 2px solid var(--color-accent);
   border-radius: 0;
+  opacity: 0;
   pointer-events: none;
   z-index: 5;
+  transition: opacity var(--duration-fast) var(--ease-standard);
+}
+
+.month-cell.is-selected::after,
+.month-cell.is-drop-target::after {
+  opacity: 1;
 }
 
 /* 键盘焦点：同款完整描边（虚线区分） */
 .month-cell:focus-within:not(.is-selected)::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border: 2px dashed var(--color-accent);
-  border-radius: 0;
-  pointer-events: none;
-  z-index: 5;
+  border-style: dashed;
+  opacity: 1;
 }
 
 .month-cell.is-drop-target {
   --column-bg: var(--color-accent-soft);
-}
-
-.month-cell.is-drop-target::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border: 2px solid var(--color-accent);
-  border-radius: 0;
-  pointer-events: none;
-  z-index: 5;
 }
 
 .cell-head {
@@ -319,6 +329,8 @@ function onDrop(key: string, event: DragEvent): void {
   font-weight: var(--font-weight-medium);
   /* 非选中日期略微降低对比度（仍清晰可读） */
   color: var(--color-text-secondary);
+  /* 选中 / 今日 / 完成状态之间颜色平滑过渡 */
+  transition: color var(--duration-base) var(--ease-standard);
 }
 
 .cell-day.is-complete {
@@ -361,7 +373,10 @@ function onDrop(key: string, event: DragEvent): void {
   line-height: 1.4;
   cursor: pointer;
   opacity: 0.45;
-  transition: opacity 0.12s ease;
+  transition:
+    opacity var(--duration-fast) var(--ease-standard),
+    background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
 }
 
 .month-cell:hover .cell-menu,
@@ -372,6 +387,10 @@ function onDrop(key: string, event: DragEvent): void {
 .cell-menu:hover {
   background: var(--color-bg);
   color: var(--color-accent-text);
+}
+
+.cell-menu:active {
+  background: var(--color-accent-soft);
 }
 
 /* ---------- 任务圆点（极简显示：只有科目主题色圆点） ---------- */
@@ -394,6 +413,8 @@ function onDrop(key: string, event: DragEvent): void {
   border-radius: 50%;
   /* 浅色底上的小面积色块：加一层极淡描边保证边界清晰 */
   box-shadow: 0 0 0 1px rgba(17, 20, 24, 0.08);
+  /* 完成状态切换时透明度平滑变化 */
+  transition: opacity var(--duration-base) var(--ease-standard);
 }
 
 /* 已完成任务：圆点保留但降低透明度（完成状态语义不变） */

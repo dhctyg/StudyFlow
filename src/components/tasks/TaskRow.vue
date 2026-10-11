@@ -90,7 +90,23 @@ function onOpenMenu(event: MouseEvent): void {
   gap: var(--space-2);
   padding: var(--row-pad-sm);
   border-radius: var(--radius-md);
-  transition: background-color 0.12s ease;
+  transition: background-color var(--duration-fast) var(--ease-standard);
+  /**
+   * 新增任务时轻微淡入：v-for 按 id 复用节点，因此只有「新出现」的行会播放，
+   * 勾选完成 / 删除 / 改期等已有行不会重播（不会造成列表闪烁）。
+   * 只做透明度、不做位移：行列表自身可滚动，位移会让滚动高度短暂变化，
+   * 可能在边缘处引发滚动条闪现。
+   */
+  animation: row-in var(--duration-base) var(--ease-out);
+}
+
+@keyframes row-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .task-row:hover {
@@ -128,6 +144,15 @@ function onOpenMenu(event: MouseEvent): void {
   color: var(--text-primary);
   font-size: var(--font-size-base);
   overflow-wrap: anywhere;
+  /**
+   * 完成时删除线平滑淡入：line-through 常驻但默认透明，
+   * 只过渡 text-decoration-color，不改变文字排版（不会引起换行跳动）。
+   */
+  text-decoration: line-through;
+  text-decoration-color: transparent;
+  transition:
+    color var(--duration-base) var(--ease-standard),
+    text-decoration-color var(--duration-base) var(--ease-standard);
 }
 
 .row-meta {
@@ -165,7 +190,7 @@ function onOpenMenu(event: MouseEvent): void {
 
 .task-row.is-done .row-title {
   color: var(--text-muted);
-  text-decoration: line-through;
+  text-decoration-color: currentColor;
 }
 
 .row-more {

@@ -31,28 +31,34 @@ onBeforeUnmount(() => {
 
 <template>
   <Teleport to="body">
-    <div
-      v-if="modelValue"
-      class="modal-overlay"
-      @click.self="emit('update:modelValue', false)"
-    >
-      <div class="modal-panel" role="dialog" aria-modal="true" :aria-label="title">
-        <header class="modal-header">
-          <h2 class="modal-title">{{ title }}</h2>
-          <button
-            class="btn btn-quiet modal-close"
-            aria-label="关闭"
-            type="button"
-            @click="emit('update:modelValue', false)"
-          >
-            ×
-          </button>
-        </header>
-        <div class="modal-body">
-          <slot />
+    <!--
+      使用 Vue <Transition> 管理遮罩与面板的进入 / 退出：
+      关闭时元素会保留到退出动画结束再销毁，避免「内容突然消失、遮罩延迟消失」的割裂感。
+    -->
+    <Transition name="modal">
+      <div
+        v-if="modelValue"
+        class="modal-overlay"
+        @click.self="emit('update:modelValue', false)"
+      >
+        <div class="modal-panel" role="dialog" aria-modal="true" :aria-label="title">
+          <header class="modal-header">
+            <h2 class="modal-title">{{ title }}</h2>
+            <button
+              class="btn btn-quiet modal-close"
+              aria-label="关闭"
+              type="button"
+              @click="emit('update:modelValue', false)"
+            >
+              ×
+            </button>
+          </header>
+          <div class="modal-body">
+            <slot />
+          </div>
         </div>
       </div>
-    </div>
+    </Transition>
   </Teleport>
 </template>
 
@@ -106,5 +112,48 @@ onBeforeUnmount(() => {
 
 .modal-body {
   padding: var(--space-2) var(--space-4) var(--space-4);
+}
+
+/**
+ * ---------- 进入 / 退出动效 ----------
+ * - 遮罩：透明度渐变（--duration-slow，约 260ms）；
+ * - 面板：透明度 + 小幅位移 + 极轻微缩放，避免「突然出现」与弹跳；
+ * - 进入用 --ease-out（先快后缓、落点稳定），退出用 --ease-in（先缓后快、离开利落），
+ *   两者时长一致，关闭时内容不会先于背景消失，也不会出现弹跳；
+ * - 只动画化 opacity / transform，不涉及宽高与边距，因此不产生布局抖动。
+ */
+.modal-enter-active {
+  transition: opacity var(--duration-slow) var(--ease-out);
+}
+
+.modal-leave-active {
+  transition: opacity var(--duration-slow) var(--ease-in);
+}
+
+.modal-enter-active .modal-panel {
+  transition:
+    opacity var(--duration-slow) var(--ease-out),
+    transform var(--duration-slow) var(--ease-out);
+}
+
+.modal-leave-active .modal-panel {
+  transition:
+    opacity var(--duration-slow) var(--ease-in),
+    transform var(--duration-slow) var(--ease-in);
+}
+
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+}
+
+.modal-enter-from .modal-panel {
+  opacity: 0;
+  transform: translateY(-8px) scale(0.985);
+}
+
+.modal-leave-to .modal-panel {
+  opacity: 0;
+  transform: translateY(-4px) scale(0.99);
 }
 </style>

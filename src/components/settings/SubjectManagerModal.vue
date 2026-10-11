@@ -500,8 +500,8 @@ function onConfirmDelete(): void {
   color: #ffffff;
   cursor: pointer;
   transition:
-    transform 0.12s ease,
-    box-shadow 0.12s ease;
+    transform var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-standard);
 }
 
 /* 亮色色块上的勾选标记改用深色，保证浅色选项也清晰可辨 */
@@ -511,6 +511,11 @@ function onConfirmDelete(): void {
 
 .preset-swatch:hover {
   transform: scale(1.06);
+}
+
+/* 按下：轻微收缩，松开后平滑回到原大小（选中态的描边阴影也一并过渡） */
+.preset-swatch:active:not(.is-custom) {
+  transform: scale(0.98);
 }
 
 /* 选中态：外圈描边 + 勾选标记（浅色 / 深色色块都能一眼分辨） */

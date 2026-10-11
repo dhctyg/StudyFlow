@@ -70,10 +70,19 @@ option {
   font-size: var(--font-size-base);
   line-height: 1.4;
   cursor: pointer;
+  /* 悬停 / 按下 / 禁用反馈都走同一组动效令牌，避免状态切换时颜色突然跳变 */
   transition:
-    background-color 0.12s ease,
-    border-color 0.12s ease,
-    color 0.12s ease;
+    background-color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard),
+    opacity var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-out);
+}
+
+/* 按下：轻微收缩，松手即回弹（transform 不参与布局，不影响连续点击） */
+.btn:active:not(:disabled) {
+  transform: scale(0.985);
 }
 
 .btn:disabled {
@@ -266,13 +275,20 @@ option {
   font-size: var(--font-size-sm);
   cursor: pointer;
   transition:
-    background-color 0.12s ease,
-    color 0.12s ease;
+    background-color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-out);
 }
 
 .icon-btn:hover {
   background: var(--color-bg);
   color: var(--color-accent-text);
+}
+
+/* 按下：轻微收缩，与文字按钮保持同一套反馈节奏 */
+.icon-btn:active {
+  transform: scale(0.96);
 }
 
 .icon-btn[aria-pressed='true'] {
@@ -408,4 +424,22 @@ option {
   padding: var(--space-5) var(--space-4);
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
+}
+
+/* ---------- 减少动态效果偏好（prefers-reduced-motion） ---------- */
+
+/**
+ * 尊重系统「减少动态效果」设置：把过渡与动画压缩到接近瞬时。
+ * 保留状态变化本身（颜色 / 位置仍然正确），只是不再有过渡过程，
+ * 因此不会影响任何交互逻辑或数据。
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+  }
 }

@@ -184,6 +184,18 @@ function onTaskDragStart(task: Task, event: DragEvent): void {
   min-height: 0;
   background: var(--color-surface);
   overflow: hidden;
+  /* 视图切换：整块淡入（只做透明度，不逐列播放；任务更新时不会重播） */
+  animation: calendar-view-in var(--duration-base) var(--ease-out);
+}
+
+/* 周 / 月视图共用的切换动效（各自在组件内声明，避免跨组件依赖） */
+@keyframes calendar-view-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .week-scroll {
@@ -217,7 +229,8 @@ function onTaskDragStart(task: Task, event: DragEvent): void {
   min-height: 200px;
   border-left: 1px solid var(--color-grid-divider);
   background: var(--column-bg);
-  transition: background-color 0.12s ease;
+  /* 普通 / 休息 / 缓冲 / 悬停 / 选中之间的底色变化平滑过渡，不再瞬间跳变 */
+  transition: background-color var(--duration-base) var(--ease-standard);
 }
 
 .day-column:first-child {
@@ -252,46 +265,40 @@ function onTaskDragStart(task: Task, event: DragEvent): void {
 }
 
 /**
- * 选中列：用伪元素绘制「覆盖整列」的直角描边。
+ * 选中 / 键盘焦点 / 拖拽落点：统一用一个**常驻**伪元素绘制「覆盖整列」的直角描边。
  * - 表头是 position: sticky（z-index 2），普通 outline / border 会被它盖住顶部，
  *   因此用 ::after + 更高 z-index 画在最上层，日期行与任务区四周都完整；
  * - pointer-events: none 保证不遮挡任务文字与点击区域；
- * - 不使用圆角，与列分隔线风格统一，也避免与卡片圆角冲突。
+ * - 不使用圆角，与列分隔线风格统一，也避免与卡片圆角冲突；
+ * - 伪元素始终存在（默认 opacity: 0），只用 opacity 过渡显隐：
+ *   不改变尺寸、不参与布局，因此列宽、描边位置都不会因动画而变化或错位。
  */
-.day-column.is-selected::after {
+.day-column::after {
   content: '';
   position: absolute;
   inset: 0;
   border: 2px solid var(--color-accent);
   border-radius: 0;
+  opacity: 0;
   pointer-events: none;
   z-index: 5;
+  transition: opacity var(--duration-fast) var(--ease-standard);
+}
+
+.day-column.is-selected::after,
+.day-column.is-drop-target::after {
+  opacity: 1;
 }
 
 /* 键盘焦点：与选中态同款完整描边（虚线区分） */
 .day-column:focus-within:not(.is-selected)::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border: 2px dashed var(--color-accent);
-  border-radius: 0;
-  pointer-events: none;
-  z-index: 5;
+  border-style: dashed;
+  opacity: 1;
 }
 
 /* 拖拽落点：整列描边 + 底色提示 */
 .day-column.is-drop-target {
   --column-bg: var(--color-accent-soft);
-}
-
-.day-column.is-drop-target::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border: 2px solid var(--color-accent);
-  border-radius: 0;
-  pointer-events: none;
-  z-index: 5;
 }
 
 .day-head {
@@ -307,6 +314,10 @@ function onTaskDragStart(task: Task, event: DragEvent): void {
   /* 与整列底色一致：sticky 滚动时不会露出白色底 */
   background: var(--column-bg);
   cursor: pointer;
+  /* 与整列同步过渡，避免表头底色 / 边缘色与列身出现不同步的跳变 */
+  transition:
+    background-color var(--duration-base) var(--ease-standard),
+    border-color var(--duration-base) var(--ease-standard);
 }
 
 .head-line {
@@ -321,6 +332,8 @@ function onTaskDragStart(task: Task, event: DragEvent): void {
   font-weight: var(--font-weight-medium);
   /* 非选中日期略微降低对比度（仍清晰可读） */
   color: var(--color-text-secondary);
+  /* 选中 / 完成 / 今日状态之间颜色平滑过渡 */
+  transition: color var(--duration-base) var(--ease-standard);
 }
 
 /* 当天任务全部完成：日期数字用保留色（绿色），不再额外显示标签 */
@@ -350,11 +363,18 @@ function onTaskDragStart(task: Task, event: DragEvent): void {
   font-size: var(--font-size-sm);
   line-height: 1;
   cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
 }
 
 .head-menu:hover {
   background: var(--color-bg);
   color: var(--color-accent-text);
+}
+
+.head-menu:active {
+  background: var(--color-accent-soft);
 }
 
 .day-body {
@@ -366,7 +386,8 @@ function onTaskDragStart(task: Task, event: DragEvent): void {
   min-height: 0;
   padding: 4px;
   cursor: pointer;
-  transition: box-shadow 0.12s ease;
+  /* 悬停叠加层淡入淡出（inset 阴影不参与布局） */
+  transition: box-shadow var(--duration-fast) var(--ease-standard);
 }
 
 /* 空白区域的点击反馈：极淡叠加层，不改写列底色（普通 / 休息 / 缓冲列的颜色都能保留） */

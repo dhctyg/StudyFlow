@@ -309,12 +309,19 @@ function onCancel(): void {
   color: var(--text-secondary);
   cursor: pointer;
   transition:
-    border-color 0.12s ease,
-    color 0.12s ease;
+    border-color var(--duration-fast) var(--ease-standard),
+    background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-out);
 }
 
 .icon-choice:hover {
   color: var(--color-accent-text);
+}
+
+/* 按下：轻微收缩（选中态的描边与浅底平滑过渡） */
+.icon-choice:active {
+  transform: scale(0.96);
 }
 
 .icon-choice.is-active {

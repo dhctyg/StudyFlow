@@ -160,9 +160,15 @@ function onOpenDayMenu(dateKey: string, x: number, y: number): void {
   white-space: nowrap;
   cursor: pointer;
   transition:
-    background-color 0.12s ease,
-    color 0.12s ease,
-    border-color 0.12s ease;
+    background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-out);
+}
+
+/* 按下：轻微收缩（不改变尺寸，连续点击依然跟手） */
+.subject-chip:active {
+  transform: scale(0.98);
 }
 
 .subject-chip.is-all {
@@ -230,12 +236,19 @@ function onOpenDayMenu(dateKey: string, x: number, y: number): void {
   font-size: var(--font-size-base);
   cursor: pointer;
   transition:
-    background-color 0.12s ease,
-    color 0.12s ease;
+    background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-out);
 }
 
 .seg-btn:hover {
   color: var(--color-text);
+}
+
+/* 按下：轻微收缩（选中态的浅底与阴影也会平滑过渡，不再瞬间跳变） */
+.seg-btn:active {
+  transform: scale(0.98);
 }
 
 .seg-btn[aria-pressed='true'] {

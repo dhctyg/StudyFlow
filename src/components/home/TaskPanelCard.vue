@@ -277,15 +277,17 @@ function onToggleDone(task: Task): void {
       </p>
     </div>
 
-    <TaskActionMenu
-      v-if="menu !== null"
-      :title="menu.task.content"
-      :items="menuItems"
-      :x="menu.x"
-      :y="menu.y"
-      @select="runAction"
-      @close="menu = null"
-    />
+    <Transition name="menu">
+      <TaskActionMenu
+        v-if="menu !== null"
+        :title="menu.task.content"
+        :items="menuItems"
+        :x="menu.x"
+        :y="menu.y"
+        @select="runAction"
+        @close="menu = null"
+      />
+    </Transition>
 
     <ConfirmDialog
       v-model="confirmOpen"
@@ -315,6 +317,19 @@ function onToggleDone(task: Task): void {
   flex: 1 1 0;
   flex-direction: column;
   min-height: 0;
+  /* 页签切换：内容轻微淡入（v-if/v-else 会重建节点，因此每次切换只播一次） */
+  animation: panel-section-in var(--duration-base) var(--ease-out);
+}
+
+@keyframes panel-section-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 /* 页签：与日历的「周 / 月」切换同一套样式（同一组内排列，选中清晰、未选中简洁） */
@@ -344,12 +359,17 @@ function onToggleDone(task: Task): void {
   white-space: nowrap;
   cursor: pointer;
   transition:
-    background-color 0.12s ease,
-    color 0.12s ease;
+    background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard);
 }
 
 .tab-btn:hover {
   color: var(--color-text);
+}
+
+.tab-btn:active {
+  background: var(--color-accent-soft);
 }
 
 .tab-btn[aria-selected='true'] {
@@ -424,6 +444,7 @@ function onToggleDone(task: Task): void {
   color: var(--text-secondary);
   font-size: var(--font-size-xs);
   overflow-wrap: anywhere;
+  animation: panel-section-in var(--duration-base) var(--ease-out);
 }
 
 .legacy-hint {
@@ -443,6 +464,7 @@ function onToggleDone(task: Task): void {
   color: var(--color-buffer-text);
   font-size: var(--font-size-xs);
   overflow-wrap: anywhere;
+  animation: panel-section-in var(--duration-base) var(--ease-out);
 }
 
 .link-btn {
@@ -453,6 +475,15 @@ function onToggleDone(task: Task): void {
   font-size: var(--font-size-xs);
   text-decoration: underline;
   cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+
+.link-btn:hover {
+  color: var(--text-primary);
+}
+
+.link-btn:active {
+  color: var(--color-accent);
 }
 </style>
 

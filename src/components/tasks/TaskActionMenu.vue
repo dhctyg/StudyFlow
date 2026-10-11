@@ -102,10 +102,17 @@ const position = computed(() => {
   font-size: var(--font-size-sm);
   text-align: left;
   cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
 }
 
 .menu-item:hover {
   background: var(--color-surface-subtle);
+}
+
+.menu-item:active {
+  background: var(--color-accent-soft);
 }
 
 .menu-item.is-danger {
@@ -123,5 +130,44 @@ const position = computed(() => {
   margin-left: auto;
   color: var(--text-muted);
   font-size: var(--font-size-xs);
+}
+
+/**
+ * ---------- 进入 / 退出动效（name="menu"） ----------
+ * 与日期类型菜单共用同一套过渡：过渡类由父组件的 <Transition name="menu">
+ * 加在组件根节点（.task-menu-backdrop）上，面板轻微位移 + 淡入淡出。
+ * 根节点与面板的过渡时长一致，退出时 Vue 以根节点时长为准，面板不会中途被截断。
+ */
+.menu-enter-active {
+  transition: opacity var(--duration-base) var(--ease-out);
+}
+
+.menu-leave-active {
+  transition: opacity var(--duration-base) var(--ease-in);
+  /* 退出动画期间不再拦截点击：避免快速连续操作时这一下被透明的菜单背板吞掉 */
+  pointer-events: none;
+}
+
+.menu-enter-active .task-menu {
+  transition:
+    opacity var(--duration-base) var(--ease-out),
+    transform var(--duration-base) var(--ease-out);
+}
+
+.menu-leave-active .task-menu {
+  transition:
+    opacity var(--duration-base) var(--ease-in),
+    transform var(--duration-base) var(--ease-in);
+}
+
+.menu-enter-from,
+.menu-leave-to {
+  opacity: 0;
+}
+
+.menu-enter-from .task-menu,
+.menu-leave-to .task-menu {
+  opacity: 0;
+  transform: translateY(-4px) scale(0.98);
 }
 </style>

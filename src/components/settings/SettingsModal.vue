@@ -493,13 +493,17 @@ function onRestoreDialogUpdate(value: boolean): void {
   text-align: left;
   cursor: pointer;
   transition:
-    background-color 0.12s ease,
-    color 0.12s ease;
+    background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
 }
 
 .nav-item:hover {
   background: var(--color-bg);
   color: var(--text-primary);
+}
+
+.nav-item:active {
+  background: var(--color-accent-soft);
 }
 
 /* 当前项：低调的浅底 + 加粗，不做高饱和色块 */
@@ -514,6 +518,24 @@ function onRestoreDialogUpdate(value: boolean): void {
   max-height: 62vh;
   overflow-y: auto;
   padding-right: 4px;
+}
+
+/**
+ * 设置项切换：右侧内容轻微淡入（只做透明度，不改变面板高度）。
+ * 元素由 v-if / v-else 重建，因此只在切换设置项时播放，不会因为实时预览重播。
+ * 这里刻意不做位移：内容区自身可滚动，位移会让滚动高度短暂变化，可能引发滚动条闪现。
+ */
+.settings-pane > * {
+  animation: pane-in var(--duration-base) var(--ease-out);
+}
+
+@keyframes pane-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 /* 窄屏：导航移到顶部横向排列，避免挤压内容 */

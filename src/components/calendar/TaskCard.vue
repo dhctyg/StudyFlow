@@ -87,7 +87,14 @@ const title = computed(() => {
   text-align: left;
   cursor: pointer;
   overflow: hidden;
-  transition: background-color 0.12s ease;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    opacity var(--duration-fast) var(--ease-standard);
+}
+
+/* 按下：轻微变淡，松手即恢复（不改变尺寸，不影响连续点击） */
+.task-card:active {
+  opacity: 0.85;
 }
 
 /* 悬停回退（不支持 color-mix 的浏览器） */
@@ -137,6 +144,7 @@ const title = computed(() => {
   color: var(--color-text-secondary);
   letter-spacing: 0.02em;
   white-space: nowrap;
+  transition: color var(--duration-base) var(--ease-standard);
 }
 
 /* 名称最多占 10 个字符宽，超出部分悬停时横向滚动查看（不改动保存的数据） */
@@ -183,6 +191,7 @@ const title = computed(() => {
   color: var(--color-text-muted);
   font-weight: var(--font-weight-regular);
   white-space: nowrap;
+  transition: color var(--duration-base) var(--ease-standard);
 }
 
 /* ---------- 第三行起：任务内容 ---------- */
@@ -191,6 +200,15 @@ const title = computed(() => {
   font-size: var(--font-size-sm);
   color: var(--color-text);
   overflow-wrap: anywhere;
+  /**
+   * 完成时用 text-decoration-color 过渡代替删除线的瞬间出现：
+   * 删除线始终存在但默认透明，标记完成时平滑淡入（不改变文字排版，不引起换行跳动）。
+   */
+  text-decoration: line-through;
+  text-decoration-color: transparent;
+  transition:
+    color var(--duration-base) var(--ease-standard),
+    text-decoration-color var(--duration-base) var(--ease-standard);
 }
 
 .task-card.is-done .card-meta,
@@ -200,7 +218,7 @@ const title = computed(() => {
 
 .task-card.is-done .card-content {
   color: var(--color-text-muted);
-  text-decoration: line-through;
+  text-decoration-color: currentColor;
 }
 </style>
 

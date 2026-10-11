@@ -92,8 +92,9 @@ function onEntry(id: (typeof ENTRIES)[number]['id']): void {
   white-space: nowrap;
   cursor: pointer;
   transition:
-    background-color 0.12s ease,
-    color 0.12s ease;
+    background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-out);
 }
 
 .bar-entry:hover {
@@ -103,6 +104,7 @@ function onEntry(id: (typeof ENTRIES)[number]['id']): void {
 
 .bar-entry:active {
   background: var(--color-accent-soft);
+  transform: scale(0.98);
 }
 
 /* 窄屏：入口压缩为图标（语义由 title / aria-label 保留），不造成标题栏溢出 */

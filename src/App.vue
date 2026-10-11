@@ -179,16 +179,18 @@ function onConfirmRestMove(): void {
 
     <SubjectManagerModal v-model="subjectsOpen" />
 
-    <!-- 日期类型菜单：右键与「⋯」按钮共用 -->
-    <DayTypeMenu
-      v-if="dayMenu !== null"
-      :date-key="dayMenu.dateKey"
-      :current="dayTypeOf(dayMenu.dateKey)"
-      :x="dayMenu.x"
-      :y="dayMenu.y"
-      @select="onDayTypeSelect"
-      @close="dayMenu = null"
-    />
+    <!-- 日期类型菜单：右键与「⋯」按钮共用（<Transition> 让关闭时也有完整退出动画） -->
+    <Transition name="menu">
+      <DayTypeMenu
+        v-if="dayMenu !== null"
+        :date-key="dayMenu.dateKey"
+        :current="dayTypeOf(dayMenu.dateKey)"
+        :x="dayMenu.x"
+        :y="dayMenu.y"
+        @select="onDayTypeSelect"
+        @close="dayMenu = null"
+      />
+    </Transition>
 
     <!-- 拖到休息日：明确提示后由用户决定，不静默修改日期 -->
     <ConfirmDialog
@@ -255,6 +257,22 @@ function onConfirmRestMove(): void {
   font-size: var(--font-size-sm);
   overflow-wrap: anywhere;
   cursor: pointer;
+  /**
+   * 只做进入动画（淡入 + 轻微上移）：提示出现更柔和，
+   * 消失时立即让位，避免元素在退出动画期间仍占位导致主内容延迟上移（布局跳动）。
+   */
+  animation: notice-in var(--duration-base) var(--ease-out);
+}
+
+@keyframes notice-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 /* 窄屏：改为单列，卡片给出可用高度，绝不横向溢出 */
