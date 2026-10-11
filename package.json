@@ -1,0 +1,25 @@
+{
+  "name": "dashboard",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "lucide-vue-next": "^0.577.0",
+    "vue": "^3.5.13"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.4",
+    "@vue/test-utils": "^2.5.1",
+    "jsdom": "^30.1.2",
+    "typescript": "~5.7.3",
+    "vite": "^6.0.0",
+    "vitest": "^3.2.7",
+    "vue-tsc": "^2.2.0"
+  }
+}

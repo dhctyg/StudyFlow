@@ -1,0 +1,411 @@
+/* 基础样式：reset + 排版 + 通用按钮 / 表单原语。令牌见 tokens.css。 */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  /* 全局使用 MiSans（含回退栈），页面标题 / 正文 / 卡片 / 日历 / 任务列表 / 弹窗均继承此字体 */
+  font-family: var(--font-sans);
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height);
+  color: var(--color-text);
+  background-color: var(--color-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.3;
+}
+
+p {
+  margin: 0;
+}
+
+button,
+input,
+select,
+textarea,
+optgroup,
+option {
+  /* 原生表单控件跟随全局字体（MiSans），不使用浏览器默认 UI 字体 */
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+/* ---------- 按钮 ---------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: var(--button-height);
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: var(--button-radius);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--font-size-base);
+  line-height: 1.4;
+  cursor: pointer;
+  transition:
+    background-color 0.12s ease,
+    border-color 0.12s ease,
+    color 0.12s ease;
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--color-accent);
+  color: #ffffff;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--color-accent-hover);
+}
+
+.btn-ghost {
+  border-color: var(--color-border-strong);
+  color: var(--color-text-secondary);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  color: var(--color-text);
+  border-color: var(--color-text-secondary);
+}
+
+.btn-ghost[aria-pressed='true'] {
+  background: var(--color-accent-soft);
+  border-color: var(--color-accent);
+  color: var(--color-accent-text);
+}
+
+.btn-quiet {
+  padding: 4px 8px;
+  background: transparent;
+  color: var(--color-text-secondary);
+}
+
+.btn-quiet:hover:not(:disabled) {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.btn-danger {
+  background: var(--color-danger);
+  color: #ffffff;
+}
+
+.btn-danger:hover:not(:disabled) {
+  filter: brightness(0.92);
+}
+
+/* ---------- 表单 ---------- */
+
+.field {
+  margin-bottom: var(--space-4);
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.input,
+.textarea,
+.select {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--font-size-base);
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 72px;
+}
+
+.field-error {
+  margin-top: var(--space-1);
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
+}
+
+/* ---------- 滚动条（简洁中性灰；不隐藏滚动条本体，保留可发现性） ---------- */
+
+/* 标准属性回退（Firefox 等）：细滑块 + 透明轨道 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+/* Chromium / WebKit：全局统一，日历、弹窗、任务列表等局部滚动容器同样生效 */
+::-webkit-scrollbar {
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size);
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  /* border + background-clip 让滑块与轨道之间留白，视觉更轻 */
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-color: var(--scrollbar-thumb);
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-thumb-hover);
+}
+
+/* 不显示多余的箭头按钮与角部装饰 */
+::-webkit-scrollbar-button,
+::-webkit-scrollbar-corner {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+/* ---------- 首页卡片外壳（四张卡片共用同一套外观参数） ---------- */
+
+.home-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--card-bg);
+  /* 边框宽度 / 颜色 / 圆角 / 阴影都可由界面自定义中心调整 */
+  border: var(--card-border-width) solid var(--card-border);
+  border-radius: var(--card-radius);
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+}
+
+.home-card-head {
+  display: flex;
+  align-items: center;
+  gap: var(--control-gap);
+  flex-shrink: 0;
+  padding: var(--card-pad-sm) var(--card-pad);
+  border-bottom: var(--card-border-width) solid var(--card-border);
+}
+
+.home-card-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+}
+
+.home-card-meta {
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+}
+
+.home-card-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--card-pad);
+}
+
+.home-card-body.is-flush {
+  padding: 0;
+}
+
+/* 卡片内的图标按钮 / 计数徽标 */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  height: var(--button-height);
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: var(--button-radius);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition:
+    background-color 0.12s ease,
+    color 0.12s ease;
+}
+
+.icon-btn:hover {
+  background: var(--color-bg);
+  color: var(--color-accent-text);
+}
+
+.icon-btn[aria-pressed='true'] {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-text);
+}
+
+.btn-with-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.count-chip {
+  padding: 0 5px;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 空状态：占位说明 + 可选入口，保持轻量 */
+.card-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+}
+
+/* ---------- 通用展示 ---------- */
+
+/* 全部完成：绿色标记（与休息日标记相互独立、可并存） */
+.badge-complete {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border: 1px solid var(--color-complete-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-complete-bg);
+  color: var(--color-success);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+/* 缓冲日：青绿系标签，用于承接逾期任务的日期 */
+.badge-buffer {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 5px;
+  border: 1px solid var(--color-buffer-badge-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-buffer-badge-bg);
+  color: var(--color-buffer-badge-text);
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+/* 休息日：蓝色系标签（浅蓝底 + 清晰文字），可与完成状态并列居中 */
+.badge-rest {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 5px;
+  border: 1px solid var(--color-rest-badge-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-rest-badge-bg);
+  color: var(--color-rest-badge-text);
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- 面板（仪表盘三大区域共用的外壳） ---------- */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-panel);
+  overflow: hidden;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.panel-title {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+/* 区域小标签：比标题更弱，用于点明区域用途 */
+.panel-overline {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.08em;
+}
+
+.panel-meta {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.panel-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.panel-empty {
+  padding: var(--space-5) var(--space-4);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}

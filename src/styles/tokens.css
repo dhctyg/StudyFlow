@@ -1,0 +1,173 @@
+/**
+ * 设计令牌 — 现代学习仪表盘：浅色底、白色面板、细腻描边、克制的阴影。
+ * 仅浅色主题；后续深色模式只需在 [data-theme="dark"] 下覆盖本文件变量。
+ */
+:root {
+  /* 颜色：以中性灰为主（低饱和、低装饰），绿色专属于“全部完成”状态 */
+  --color-bg: #f7f7f7;
+  --color-surface: #ffffff;
+  /** 面板内的次级区域（列表行 / 折叠区） */
+  --color-surface-subtle: #fafafa;
+  /** 面板与分隔用的极轻描边 */
+  --color-border: #ececec;
+  /** 表单控件描边（不用于日历网格线） */
+  --color-border-strong: #d7d7d7;
+
+  --color-text: #1f2329;
+  --color-text-secondary: #565e6b;
+  --color-text-muted: #939aa6;
+
+  /* 主色：近黑中性灰（填充按钮 / 选中态 / 焦点环），不使用高饱和彩色 */
+  --color-accent: #2f3336;
+  --color-accent-hover: #1f2225;
+  --color-accent-soft: #ededee;
+  --color-accent-text: #33373d;
+
+  --color-success: #3f7d55;
+  --color-complete-bg: #eaf2ec;
+  --color-complete-border: #bcd6c4;
+
+  /* 休息日：浅蓝底 + 蓝字（标签与日期格共用），与缓冲日、完成状态相互区分 */
+  --color-rest-bg: #eef3fc;
+  --color-rest-border: #cddbf3;
+  --color-rest-text: #3d5488;
+  --color-rest-badge-bg: #e9effa;
+  --color-rest-badge-border: #c6d5f0;
+  --color-rest-badge-text: #33467f;
+
+  /* 缓冲日：承接逾期任务的日期类型（青绿系，避开休息日蓝与完成绿） */
+  --color-buffer-bg: #e9f4f3;
+  --color-buffer-border: #bcdcd8;
+  --color-buffer-text: #2f6a63;
+  --color-buffer-badge-bg: #e4f2f1;
+  --color-buffer-badge-border: #b3d8d3;
+  --color-buffer-badge-text: #2c6a62;
+
+  /**
+   * 日历网格线层次（由弱到强，均比表单描边轻）：
+   * - grid-line：每小时参考线。当前周视图只画 2 小时主刻度线（更简洁），该令牌保留备用；
+   * - grid-line-strong：周视图两小时主网格线；
+   * - grid-divider：日期列 / 月视图格子的分隔线。
+   */
+  --color-grid-line: #f2f4f7;
+  --color-grid-line-strong: #e4e8ed;
+  --color-grid-divider: #d5dae1;
+
+  --color-danger: #b24a47;
+  --color-overlay: rgba(20, 24, 32, 0.36);
+
+  /* 逾期提示：弱琥珀色（与休息日蓝、缓冲日青、完成绿区分开） */
+  --color-overdue-text: #8a6a2f;
+  --color-overdue-border: #d8b06a;
+  --color-overdue-bg: #fdf7ea;
+
+  /**
+   * ---------- UI 定制参数（阶段二集中管理） ----------
+   * 首页四卡片、面板与任务行的外观与节奏都只依赖下面这些令牌：
+   * 背景 / 文字色 / 描边 / 圆角 / 阴影 / 字号 / 间距 / 比例 / 图标尺寸。
+   * 后续做 UI 控制中心时，只需覆盖这里的取值（或换一份主题文件），无需改组件。
+   * 这些参数**不参与任何业务数据存储**。
+   */
+  /* 背景与卡片 */
+  --page-bg: var(--color-bg);
+  --card-bg: var(--color-surface);
+  --card-border: var(--color-border);
+  --card-radius: var(--radius-lg);
+  --card-shadow: var(--shadow-panel);
+  /* 文字层级（主 / 次 / 弱） */
+  --text-primary: var(--color-text);
+  --text-secondary: var(--color-text-secondary);
+  --text-muted: var(--color-text-muted);
+  /* 卡片与区块节奏 */
+  --card-gap: var(--space-4);
+  --card-gap-sm: var(--space-3);
+  --card-pad: var(--space-4);
+  --card-pad-sm: var(--space-3);
+  --block-gap: var(--space-3);
+  --block-gap-sm: var(--space-2);
+  /* 任务行内边距（任务卡片 / 列表行共用） */
+  --row-pad: 6px 10px;
+  --row-pad-sm: 4px 6px;
+  /**
+   * 以下令牌由「界面自定义中心」在运行时覆盖（见 models/uiTheme.ts）：
+   * 这里的取值是默认值，改动它们等价于改默认外观。
+   */
+  /* 内容最大宽度（none = 不限宽） */
+  --app-max-width: none;
+  /* 卡片默认不显示边框（用阴影与背景层次区分内容区域） */
+  --card-border-width: 0px;
+  /* 控件：按钮统一 36px 高、12px 圆角 */
+  --button-radius: 12px;
+  --button-height: 36px;
+  --control-gap: var(--space-2);
+  /* 图标颜色（currentColor = 跟随文字色） */
+  --icon-color: currentColor;
+  /* 滚动条（滑块圆角，轨道透明，低对比度，悬停加深） */
+  --scrollbar-size: 10px;
+  --scrollbar-thumb: #d5d7da;
+  --scrollbar-thumb-hover: #b9bcc1;
+  /* 首页两栏比例：左 ≈ 75%，右 ≈ 25%（右栏留最小宽度，窄屏不溢出） */
+  --home-columns: minmax(0, 3fr) minmax(320px, 1fr);
+  /* 左栏纵向：倒计时卡片 ≈ 25%，日历卡片 ≈ 75% */
+  --home-left-rows: minmax(0, 1fr) minmax(0, 3fr);
+  /* 右栏纵向：自阶段四起只放任务面板并占满整列（保留令牌以兼容旧引用） */
+  --home-right-rows: minmax(0, 1fr);
+  /* 图标尺寸（与字号同步放大，保持视觉比例） */
+  --icon-size-sm: 16px;
+  --icon-size-md: 18px;
+  --icon-size-lg: 23px;
+
+  /**
+   * 布局参数（阶段一引入，仍在使用）：
+   * - 主区域比例 / 右栏三块比例（旧三区域布局遗留，阶段二首页直接使用上面的 --home-*）；
+   * - 卡片网格：桌面 4 列 → 平板 2 列 → 手机 1 列。
+   */
+  --layout-main-columns: var(--home-columns);
+  --layout-side-rows: minmax(0, 2fr) minmax(0, 1.6fr) minmax(0, 1fr);
+  --layout-cards-columns: repeat(4, minmax(0, 1fr));
+  --layout-cards-columns-md: repeat(2, minmax(0, 1fr));
+  --layout-cards-columns-sm: minmax(0, 1fr);
+  --layout-cards-gap: var(--card-gap);
+  --layout-cards-gap-sm: var(--card-gap-sm);
+
+  /* 字体：MiSans 自托管（见 fonts.css），回退到系统中文字体；数字使用等宽字形便于对齐 */
+  --font-sans: MiSans, 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Mono', Consolas, monospace;
+
+  --font-size-xs: 13px;
+  --font-size-sm: 14px;
+  --font-size-base: 15px;
+  --font-size-md: 17px;
+  --font-size-lg: 21px;
+  --font-size-xl: 28px;
+
+  --line-height: 1.55;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+
+  /* 间距（4px 制） */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  /* 圆角：卡片 / 弹窗 16px，控件 12px（--button-radius），小元素 8–10px */
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+
+  /* 阴影三级：sm 轻 / md 中（普通卡片默认）/ lg 强（弹窗与浮层） */
+  --shadow-sm: 0 1px 2px rgba(17, 20, 24, 0.04);
+  --shadow-md: 0 2px 8px rgba(17, 20, 24, 0.06), 0 1px 2px rgba(17, 20, 24, 0.04);
+  --shadow-lg: 0 12px 32px rgba(17, 20, 24, 0.14);
+  /* 兼容旧令牌名（等价于三级阴影） */
+  --shadow-panel: var(--shadow-md);
+  --shadow-modal: var(--shadow-lg);
+
+  /* 布局 */
+  --header-height: 64px;
+}
+

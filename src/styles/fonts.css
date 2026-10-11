@@ -1,0 +1,42 @@
+/**
+ * MiSans 自托管字体（本地文件，不使用任何外部 CDN）。
+ *
+ * 文件来源：小米 MiSans 字体包（woff2 目录），仅引入本项目实际用到的三个字重。
+ * 字重说明（重要，避免「把普通字重声明成所有字重」）：
+ *   MiSans 的 OS/2 usWeightClass 并非 400/500/600，实测为
+ *   Regular = 330、Medium = 380、Semibold = 520（同一套字的其它字重：
+ *   Thin 150 / ExtraLight 200 / Light 250 / Normal 305 / Demibold 450 / Bold 630 / Heavy 700）。
+ *   本项目设计令牌只用 400 / 500 / 600（--font-weight-regular / -medium / -semibold），
+ *   因此这里把三种字形各自映射到对应的 CSS 字重（每个 face 只声明一个具体字重，
+ *   不使用 `font-weight: 300 500` 这类区间写法），浏览器无需合成即可选到正确字形。
+ *
+ * 路径：`../fonts/…` 是相对 CSS 文件的位置。构建后 CSS 位于 dist/assets/，
+ * 该相对路径解析到 dist/fonts/（即 public/fonts 的拷贝），
+ * 因此在根路径或 GitHub Pages 子路径部署下都能正确加载。
+ *
+ * 回退：未加载成功时由 tokens.css 的 --font-sans 回退到
+ * "Microsoft YaHei" / "Noto Sans CJK SC" / sans-serif。
+ */
+@font-face {
+  font-family: 'MiSans';
+  src: url('../fonts/MiSans-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'MiSans';
+  src: url('../fonts/MiSans-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'MiSans';
+  src: url('../fonts/MiSans-Semibold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
