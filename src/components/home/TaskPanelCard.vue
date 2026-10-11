@@ -10,38 +10,41 @@ import {
   bufferDays,
   deleteTask,
   moveTaskToBufferDay,
+  moveTaskToDate,
   overdueTasks,
   selectedDate,
   selectedTasks,
   setDayType,
+  tasks,
   toggleTaskDone,
-  unscheduledTasks,
 } from '../../store/schedule'
 import { pickBufferDate } from '../../utils/taskGroups'
 import { addDaysKey, formatDayTitle, todayKey } from '../../utils/date'
 
 /**
- * 任务面板（三个可切换页面）。
+ * 任务面板（两个可切换页面）。
  *
  * - 当日安排：**当前选定日期**对应的任务（沿用日历的日期关联逻辑，含已完成用于回顾）；
  * - 逾期任务：计划日期已过且未完成（已完成的不再出现在逾期里，也不会自动顺延）；
- * - 临时任务箱：没有指定日期的任务（已排到日期的任务不会重复出现在这里）；
- * - 三个页面共用同一套查询逻辑（store 的动态分组），操作直接调用现有业务逻辑：
+ * - 「临时任务箱」页签已整体移除：新增任务一律带日期，不再有未排期入口；
+ * - 历史数据兼容：旧版本中「暂不安排日期」的任务（date === null）仍会从存储中完整读取，
+ *   这里只做一次性显式提示 + 用户手动安排（点一下把全部未排期旧任务安排到当前选中日期），
+ *   既不会让旧任务凭空消失，也不会在用户不知情时自动改写数据；
+ * - 两个页面共用同一套查询逻辑（store 的动态分组），操作直接调用现有业务逻辑：
  *   设置完成 / 删除（带确认）/ 移入缓冲日（更新原任务日期）/ 编辑 / 拖动改期。
  * - 页签风格与日历的周 / 月视图切换一致，切换只替换面板内容。
  */
 const emit = defineEmits<{
   editTask: [task: Task]
-  createTask: [dateKey: string | null]
+  createTask: [dateKey: string]
   notice: [message: string]
 }>()
 
-type SectionId = 'day' | 'overdue' | 'unscheduled'
+type SectionId = 'day' | 'overdue'
 
 const TABS: { id: SectionId; label: string }[] = [
   { id: 'day', label: '当日安排' },
   { id: 'overdue', label: '逾期任务' },
-  { id: 'unscheduled', label: '临时任务箱' },
 ]
 
 /** 当前页签：切换只更新任务面板内容，不重新加载页面 */
@@ -62,17 +65,35 @@ const pendingBufferTask = ref<Task | null>(null)
 
 const day = computed(() => selectedTasks.value)
 const overdue = computed(() => overdueTasks.value)
-const unscheduled = computed(() => unscheduledTasks.value)
+
+/**
+ * 未排期的历史任务（date === null，含已完成）。
+ * 这些任务不会出现在日历上，旧页面也已被移除，因此这里给出显式提示与一次性安排入口，
+ * 保证旧数据既不会丢失，也不会被静默改写。
+ */
+const legacyUnscheduled = computed(() => tasks.value.filter((task) => task.date === null))
 
 function countOf(id: SectionId): number {
   if (id === 'day') return day.value.length
-  if (id === 'overdue') return overdue.value.length
-  return unscheduled.value.length
+  return overdue.value.length
 }
 
-/** 共用新增入口：当日安排落在当前选定日期，其余两个页面进入临时任务箱 */
+/** 共用新增入口：落在当前选定日期（任务始终带日期） */
 function createInActiveTab(): void {
-  emit('createTask', activeTab.value === 'day' ? selectedDate.value : null)
+  emit('createTask', selectedDate.value)
+}
+
+/** 把全部未排期的历史任务安排到当前选中日期（用户主动点击才会执行） */
+function scheduleLegacyUnscheduled(): void {
+  const pending = [...legacyUnscheduled.value]
+  if (pending.length === 0) return
+  const target = selectedDate.value
+  try {
+    for (const task of pending) moveTaskToDate(task.id, target)
+    emit('notice', `已把 ${pending.length} 个未排期的旧任务安排到 ${formatDayTitle(target)}`)
+  } catch (error) {
+    emit('notice', error instanceof Error ? error.message : '安排失败，请重试')
+  }
 }
 
 const dayEmptyText = computed(() => `${formatDayTitle(selectedDate.value)} 没有任务。`)
@@ -207,6 +228,15 @@ function onToggleDone(task: Task): void {
     </header>
 
     <div class="task-panel-body">
+      <!-- 历史数据兼容：旧版「暂不安排日期」的任务，用户主动点击才会安排到当前日期 -->
+      <p v-if="legacyUnscheduled.length > 0" class="legacy-prompt" role="status">
+        <span>有 {{ legacyUnscheduled.length }} 个旧任务未安排日期：</span>
+        <button type="button" class="link-btn" @click="scheduleLegacyUnscheduled">
+          安排到 {{ formatDayTitle(selectedDate) }}
+        </button>
+        <span class="legacy-hint">（不会删除或清空任务）</span>
+      </p>
+
       <!-- 1. 当日安排：当前选定日期的任务 -->
       <section v-if="activeTab === 'day'" class="panel-section">
         <ul v-if="day.length > 0" class="row-list">
@@ -222,7 +252,7 @@ function onToggleDone(task: Task): void {
       </section>
 
       <!-- 2. 逾期任务：计划日期已过且未完成（已完成不再出现，也不自动顺延） -->
-      <section v-else-if="activeTab === 'overdue'" class="panel-section">
+      <section v-else class="panel-section">
         <ul v-if="overdue.length > 0" class="row-list">
           <TaskRow
             v-for="task in overdue"
@@ -235,25 +265,6 @@ function onToggleDone(task: Task): void {
           />
         </ul>
         <p v-else class="section-empty">没有逾期任务。</p>
-      </section>
-
-      <!-- 3. 临时任务箱：未安排日期的任务 -->
-      <section v-else class="panel-section">
-        <ul v-if="unscheduled.length > 0" class="row-list">
-          <TaskRow
-            v-for="task in unscheduled"
-            :key="task.id"
-            :task="task"
-            @open-menu="openMenu('unscheduled', $event)"
-            @toggle-done="onToggleDone"
-          />
-        </ul>
-        <div v-else class="section-empty">
-          <p>暂无任务</p>
-          <button type="button" class="btn btn-ghost" @click="emit('createTask', null)">
-            添加任务
-          </button>
-        </div>
       </section>
 
       <!-- 没有缓冲日时的内联入口：由用户决定，不静默改日期 -->
@@ -397,6 +408,26 @@ function onToggleDone(task: Task): void {
   gap: var(--space-2);
   color: var(--text-muted);
   font-size: var(--font-size-xs);
+}
+
+/* 历史数据兼容提示（未排期旧任务）：中性配色，与缓冲日提示明显区分 */
+.legacy-prompt {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  overflow-wrap: anywhere;
+}
+
+.legacy-hint {
+  color: var(--text-muted);
 }
 
 .buffer-prompt {

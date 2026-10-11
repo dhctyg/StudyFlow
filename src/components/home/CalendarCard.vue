@@ -89,12 +89,12 @@ function onOpenDayMenu(dateKey: string, x: number, y: number): void {
 
       <span v-if="selectedStatus === 'completed'" class="badge-complete">全部完成</span>
 
-      <div class="date-type-group" role="group" aria-label="设置日期类型">
+      <div class="date-type-switch" role="group" aria-label="设置日期类型">
         <button
           v-for="type in DAY_TYPE_ORDER"
           :key="type"
           type="button"
-          class="icon-btn type-btn"
+          class="seg-btn type-btn"
           :class="`is-${type}`"
           :aria-pressed="selectedDayType === type"
           :title="`设为${DAY_TYPE_LABEL[type]}`"
@@ -210,26 +210,47 @@ function onOpenDayMenu(dateKey: string, x: number, y: number): void {
   white-space: nowrap;
 }
 
-.date-type-group {
+/* 日期类型：与日历卡片内的「周 / 月」切换同款分段控件（形状、圆角、间距、选中反馈完全一致） */
+.date-type-switch {
   display: flex;
-  align-items: center;
-  gap: var(--space-1);
+  padding: 2px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
   margin-left: auto;
 }
 
-.type-btn {
-  font-size: var(--font-size-xs);
+/* 与 .view-btn 完全一致的按钮形态 */
+.seg-btn {
+  min-height: var(--button-height);
+  padding: 0 14px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-base);
+  cursor: pointer;
+  transition:
+    background-color 0.12s ease,
+    color 0.12s ease;
 }
 
+.seg-btn:hover {
+  color: var(--color-text);
+}
+
+.seg-btn[aria-pressed='true'] {
+  background: var(--color-surface);
+  color: var(--color-accent-text);
+  font-weight: var(--font-weight-medium);
+  box-shadow: var(--shadow-panel);
+}
+
+/* 休息日 / 缓冲日选中时沿用各自的语义色（只换颜色，形状与其它选中态一致） */
 .type-btn.is-rest[aria-pressed='true'] {
-  border-color: var(--color-rest-badge-border);
-  background: var(--color-rest-badge-bg);
   color: var(--color-rest-badge-text);
 }
 
 .type-btn.is-buffer[aria-pressed='true'] {
-  border-color: var(--color-buffer-badge-border);
-  background: var(--color-buffer-badge-bg);
   color: var(--color-buffer-badge-text);
 }
 
@@ -241,6 +262,13 @@ function onOpenDayMenu(dateKey: string, x: number, y: number): void {
   display: flex;
   flex: 1;
   min-height: 0;
+  /**
+   * 日历主体与外层卡片边缘的内边距：
+   * - 日期、列分隔线与任务内容不再贴着卡片边缘（视觉更透气）；
+   * - 同时给「选中列描边」留出空间，避免被卡片圆角与 overflow 裁切；
+   * - 只占 8px，七列宽度仍完整显示，不产生横向滚动。
+   */
+  padding: var(--space-2);
 }
 
 .calendar-view > * {

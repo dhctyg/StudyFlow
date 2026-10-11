@@ -83,7 +83,7 @@ describe('任务 CSV 导入', () => {
     })
   })
 
-  it('日期支持 YYYY/M/D 归一化；空日期进入临时任务箱', () => {
+  it('日期支持 YYYY/M/D 归一化；空日期行按未排期兼容读取', () => {
     const csv = `${HEADER}\n数学,,A,2026/10/5,09:00,10:00,否\n数学,,B,,,,否`
     const result = parseTaskCsv(csv, context())
     expect(result.valid.map((row) => row.input.date)).toEqual(['2026-10-05', null])
@@ -91,7 +91,7 @@ describe('任务 CSV 导入', () => {
     expect(result.valid[1].input.endTime).toBe('')
   })
 
-  it('逐行报错：非法日期 / 时间 / 未知科目 / 未知标签 / 空内容 / 完成状态无法识别 / 时间倒序 / 缺少时间', () => {
+  it('逐行报错：非法日期 / 时间 / 未知科目 / 未知标签 / 空内容 / 完成状态无法识别 / 时间倒序', () => {
     const csv = [
       HEADER,
       '数学,,日期错,2026-99-99,09:00,10:00,否',
@@ -101,7 +101,7 @@ describe('任务 CSV 导入', () => {
       '数学,,,2026-10-12,09:00,10:00,否',
       '数学,,状态错,2026-10-12,09:00,10:00,也许',
       '数学,,时间倒序,2026-10-12,11:00,10:00,否',
-      '数学,,缺时间,2026-10-12,,,否',
+      '数学,,只有一个时间,2026-10-12,09:00,,否',
     ].join('\n')
     const result = parseTaskCsv(csv, context())
     expect(result.valid).toHaveLength(0)
@@ -113,7 +113,17 @@ describe('任务 CSV 导入', () => {
     expect(result.issues[4].reason).toContain('任务内容为空')
     expect(result.issues[5].reason).toContain('完成状态无法识别')
     expect(result.issues[6].reason).toContain('结束时间必须晚于开始时间')
-    expect(result.issues[7].reason).toContain('已安排日期的任务需要开始与结束时间')
+    expect(result.issues[7].reason).toContain('开始与结束时间需要同时填写')
+  })
+
+  it('时间可以留空：已安排日期但未填时间的行可以导入（与表单移除时间项保持一致）', () => {
+    const csv = `${HEADER}\n数学,,没有时间的任务,2026-10-12,,,否`
+    const result = parseTaskCsv(csv, context())
+    expect(result.issues).toEqual([])
+    expect(result.valid).toHaveLength(1)
+    expect(result.valid[0].input.startTime).toBe('')
+    expect(result.valid[0].input.endTime).toBe('')
+    expect(result.valid[0].input.date).toBe('2026-10-12')
   })
 
   it('空行跳过并计数（尾部换行不会产生多余空行）', () => {

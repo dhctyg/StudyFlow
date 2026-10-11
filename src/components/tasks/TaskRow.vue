@@ -7,15 +7,16 @@ import { formatDayTitle } from '../../utils/date'
 import { startTaskDrag } from '../../utils/taskDrag'
 
 /**
- * 统一任务行（当日安排 / 逾期任务 / 临时任务箱共用）。
+ * 统一任务行（当日安排 / 逾期任务共用）。
  * - 点击行或「⋯」→ 打开操作菜单（动作由父组件执行）；
  * - 行可拖动到日历日期改期（只传任务 ID，落点更新原任务日期）；
- * - 信息层级：任务内容（主）→ 科目 · 标签 → 日期 / 状态。
+ * - 信息层级：任务内容（主）→ 科目 · 标签 → 日期 / 状态；
+ * - date === null 只可能来自历史数据（界面已无「暂不安排日期」入口），显示为「未安排日期」。
  */
 const props = withDefaults(
   defineProps<{
     task: Task
-    /** 是否显示日期信息（逾期 / 临时任务箱需要，当日安排可省） */
+    /** 是否显示日期信息（逾期任务需要，当日安排可省） */
     showDate?: boolean
     /** 日期是否以“逾期”语气展示 */
     dateTone?: 'normal' | 'overdue'

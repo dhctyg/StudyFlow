@@ -3,17 +3,17 @@
  * 星期标题行：每周一个独立圆角方框，只显示一个汉字（一…日），水平垂直居中。
  *
  * - 与日期网格同宽同列（7 等分），因此对齐日期列，且不占用日期格的点击区域；
+ * - 周视图 / 月视图都是「七列等分、不横向滚动」，无需再传入最小宽度；
  * - 星期文字只出现在这里，不插入任何日期单元格；
  * - 周视图 / 月视图共用，保证两个视图的视觉一致。
  */
-withDefaults(defineProps<{ minWidth?: string }>(), { minWidth: '' })
 
 const WEEKDAY_CHARS = ['一', '二', '三', '四', '五', '六', '日'] as const
 const LABELS = WEEKDAY_CHARS.map((char) => `周${char}`)
 </script>
 
 <template>
-  <div class="weekday-row" :style="minWidth === '' ? undefined : { minWidth }" aria-hidden="true">
+  <div class="weekday-row" aria-hidden="true">
     <span
       v-for="(label, index) in LABELS"
       :key="label"

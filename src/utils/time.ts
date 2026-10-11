@@ -116,17 +116,3 @@ export function intervalsOverlap(
   return a.start < b.end && b.start < a.end
 }
 
-/** 表单默认结束时间：开始时间 + 60 分钟，收敛到当天 23:59（不支持跨午夜）。 */
-export function defaultEndTimeFor(startTime: string): string {
-  const start = timeToMinutes(startTime)
-  if (start === null) return ''
-  return minutesToTime(Math.min(start + 60, 23 * 60 + 59))
-}
-
-/** 顶部新增任务时的默认开始时间：今天取当前时刻的下一个整点（收敛到 8–22 点），其他日期默认 09:00。 */
-export function defaultStartTimeFor(dateKey: string, todayDateKey: string, now: Date = new Date()): string {
-  if (dateKey !== todayDateKey) return '09:00'
-  const nextHour = Math.min(Math.max(now.getHours() + 1, 8), 22)
-  return minutesToTime(nextHour * 60)
-}
-

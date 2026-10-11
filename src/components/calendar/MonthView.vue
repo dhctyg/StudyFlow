@@ -12,21 +12,24 @@ import {
   visibleTasksOf,
 } from '../../store/schedule'
 import WeekdayHeader from './WeekdayHeader.vue'
+import type { Task } from '../../models/types'
 import { dayOf, todayKey } from '../../utils/date'
 import { hasTaskDrag, readTaskDragId } from '../../utils/taskDrag'
 
 /**
  * 月视图：标准月历网格（周一开头，整周对齐），只展示任务，没有时间轴。
  *
- * - 每个日期格直接列出当天任务（任务标题 + 科目色点），最多 3 条，超出显示「+N」；
- *   这样月视图里能看到**任务本身**，而不是只有科目色条。
- * - 已完成任务保留（加删除线），完成状态语义不变。
- * - 休息日（蓝）/ 缓冲日（青）/ 全部完成（绿）仍以文字标记展示，不只靠颜色。
- * - 点击日期数字选中该日；点击格子空白处（＋）为该日期新增任务；
- *   右键或「⋯」设置日期类型；从任务面板拖入任务可改期。
- * - 列表只受科目筛选影响。
+ * - 任务**极简显示**：一个任务 = 一个科目主题色小圆点（不再显示任务文字 / 时间），
+ *   同一天多个任务按开始时间排序后依次排列，圆点自动换行、互不重叠、不会溢出格子；
+ *   超过 MAX_DOTS 个时只多出一个「+N」计数，不额外占用空间。
+ * - 已完成任务保留（圆点降低透明度），完成状态语义不变。
+ * - 休息日（蓝）/ 缓冲日（青）/ 全部完成（绿）仍以底色与文字标记展示，不只靠颜色。
+ * - 点击日期数字选中该日；点击圆点区域同样只「选中该日」——右侧任务面板会列出当天任务，
+ *   可继续查看 / 编辑（月视图不再显示任务文字，也不需要额外弹窗）；
+ * - 点击格子其它空白处 = 为该日期新增任务；右键或「⋯」设置日期类型；从任务面板拖入任务可改期。
+ * - 圆点只受科目筛选影响，颜色与周视图 / 任务列表同源（科目主题色）。
  */
-const MAX_TASKS = 3
+const MAX_DOTS = 12
 
 const emit = defineEmits<{
   create: [dateKey: string]
@@ -39,6 +42,16 @@ const today = todayKey()
 const dropTarget = ref<string | null>(null)
 
 const anchorMonth = computed(() => anchorDate.value.slice(0, 7))
+
+/** 圆点悬停提示：科目 · 时间 · 任务内容（文字不进格子，信息仍可查看） */
+function dotLabel(task: Task): string {
+  const parts: string[] = [task.done ? `${subjectOf(task.subjectId).name}（已完成）` : subjectOf(task.subjectId).name]
+  if (task.startTime !== null) {
+    parts.push(task.endTime === null ? task.startTime : `${task.startTime}–${task.endTime}`)
+  }
+  parts.push(task.content)
+  return parts.join(' · ')
+}
 
 const cells = computed(() =>
   monthCells.value.map((key) => {
@@ -54,19 +67,13 @@ const cells = computed(() =>
       isBuffer: type === 'buffer',
       isComplete: statusOf(key) === 'completed',
       total: tasks.length,
-      visibleTasks: tasks.slice(0, MAX_TASKS).map((task) => ({
+      dots: tasks.slice(0, MAX_DOTS).map((task) => ({
         id: task.id,
-        content: task.content,
-        subject: subjectOf(task.subjectId),
-        time:
-          task.startTime === null
-            ? ''
-            : task.endTime === null
-              ? task.startTime
-              : `${task.startTime}–${task.endTime}`,
+        color: subjectOf(task.subjectId).color,
         done: task.done,
+        label: dotLabel(task),
       })),
-      overflowCount: Math.max(0, tasks.length - MAX_TASKS),
+      overflowCount: Math.max(0, tasks.length - MAX_DOTS),
     }
   }),
 )
@@ -116,7 +123,7 @@ function onDrop(key: string, event: DragEvent): void {
 <template>
   <div class="month-view">
     <!-- 星期标题：独立圆角方框（只显示一个汉字），与日期列对齐，不插入日期格 -->
-    <WeekdayHeader min-width="620px" />
+    <WeekdayHeader />
 
     <div class="month-grid">
       <section
@@ -152,39 +159,34 @@ function onDrop(key: string, event: DragEvent): void {
               ⋯
             </button>
           </div>
-          <span v-if="cell.isComplete" class="badge-complete cell-badge">完成</span>
+          <!-- 日期下方不再显示「完成」标签：完成状态由日期数字颜色表示 -->
         </header>
 
-        <ul v-if="cell.visibleTasks.length > 0" class="cell-tasks" @click="onCellClick(cell.key)">
-          <li
-            v-for="task in cell.visibleTasks"
-            :key="task.id"
-            class="cell-task"
-            :class="{ 'is-done': task.done }"
-            :title="`${task.subject.name}${task.time === '' ? '' : ` · ${task.time}`} · ${task.content}`"
-          >
-            <span
-              class="cell-task-dot"
-              :style="{ background: task.subject.color }"
-              aria-hidden="true"
-            />
-            <span class="cell-task-text">{{ task.content }}</span>
-          </li>
-          <li v-if="cell.overflowCount > 0" class="cell-task-more tabular" title="更多任务">
+        <!--
+          任务圆点：每个任务一个科目主题色圆点（极简，不显示文字）。
+          点击圆点区域只「选中该日」——右侧任务面板会列出当天任务，可继续查看 / 编辑。
+        -->
+        <div v-if="cell.dots.length > 0" class="cell-dots" @click.stop="onCellClick(cell.key)">
+          <span
+            v-for="dot in cell.dots"
+            :key="dot.id"
+            class="cell-dot"
+            :class="{ 'is-done': dot.done }"
+            :style="{ background: dot.color }"
+            :title="dot.label"
+          />
+          <span v-if="cell.overflowCount > 0" class="cell-dots-more tabular" title="当天任务较多">
             +{{ cell.overflowCount }}
-          </li>
-        </ul>
+          </span>
+        </div>
 
-        <!-- 空白区域：点击即为该日期新增任务（默认日期 = 该格日期） -->
-        <button
-          type="button"
+        <!-- 空白区域：点击即为该日期新增任务（默认日期 = 该格日期），不再有「＋」占位图标 -->
+        <div
           class="cell-blank"
           :aria-label="`为 ${cell.key} 新增任务`"
-          title="点击新增任务"
+          title="点击空白处新增任务"
           @click.stop="onBlankClick(cell.key)"
-        >
-          ＋
-        </button>
+        />
       </section>
     </div>
   </div>
@@ -196,8 +198,10 @@ function onDrop(key: string, event: DragEvent): void {
   flex-direction: column;
   height: 100%;
   min-height: 0;
-  /* 窄屏时在日历面板内部滚动，保证日期网格可用 */
-  overflow: auto;
+  min-width: 0;
+  /* 只允许纵向滚动（月视图内容比卡片高时才滚动），横向永不滚动 */
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .month-grid {
@@ -205,11 +209,18 @@ function onDrop(key: string, event: DragEvent): void {
   grid-template-columns: repeat(7, minmax(0, 1fr));
   grid-auto-rows: 1fr;
   flex: 1;
-  min-width: 620px;
+  /* 七列等分：不设最小宽度，窄屏压缩列宽而不是产生横向滚动条 */
+  min-width: 0;
   min-height: 400px;
 }
 
 .month-cell {
+  /**
+   * 与周视图一致：整格底色由 --column-bg 决定，选中态不会把格子变白，
+   * 休息日 / 缓冲日的底色在选中后依然保留。
+   */
+  --column-bg: var(--color-surface);
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
@@ -219,6 +230,7 @@ function onDrop(key: string, event: DragEvent): void {
   /* 每个格子只画右 / 上两条线，避免相邻格子重复描边形成粗线 */
   border-right: 1px solid var(--color-grid-divider);
   border-top: 1px solid var(--color-grid-divider);
+  background: var(--column-bg);
   cursor: pointer;
   overflow: hidden;
 }
@@ -232,40 +244,59 @@ function onDrop(key: string, event: DragEvent): void {
   border-top: none;
 }
 
-/* 休息日 / 缓冲日：格子底色 + 上边缘色低调区分（不再显示文字标签，也不改变行高） */
+/* 休息日 / 缓冲日：只换整格底色变量 + 上边缘色（不显示文字标签，也不改变行高） */
 .month-cell.is-rest {
-  background: var(--color-rest-bg);
+  --column-bg: var(--color-rest-bg);
   border-top-color: var(--color-rest-badge-border);
 }
 
 .month-cell.is-buffer {
-  background: var(--color-buffer-bg);
+  --column-bg: var(--color-buffer-bg);
   border-top-color: var(--color-buffer-badge-border);
 }
 
-/* 悬停：与选中态明显不同（浅底，无描边） */
+/* 悬停：极淡叠加层，不改写底色（休息 / 缓冲格的自身颜色也能保留） */
 .month-cell:hover:not(.is-selected):not(.is-drop-target) {
-  background: var(--color-bg);
+  box-shadow: inset 0 0 0 999px rgba(17, 20, 24, 0.02);
 }
 
-/* 选中日期：清晰描边 + 轻微光晕（不改变尺寸、不产生重叠） */
-.month-cell.is-selected {
-  outline: 2px solid var(--color-accent);
-  outline-offset: -2px;
-  box-shadow: 0 0 12px rgba(47, 51, 54, 0.16);
-  background: var(--color-surface);
+/**
+ * 选中日期：用伪元素绘制覆盖整格的直角描边（与周视图同款）。
+ * pointer-events: none 不遮挡日期格内的点击；不使用圆角，与网格线风格统一。
+ */
+.month-cell.is-selected::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--color-accent);
+  border-radius: 0;
+  pointer-events: none;
+  z-index: 5;
 }
 
-/* 键盘焦点：格内任一控件获得焦点时也给出可见提示 */
-.month-cell:focus-within:not(.is-selected) {
-  outline: 2px dashed var(--color-accent);
-  outline-offset: -2px;
+/* 键盘焦点：同款完整描边（虚线区分） */
+.month-cell:focus-within:not(.is-selected)::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 2px dashed var(--color-accent);
+  border-radius: 0;
+  pointer-events: none;
+  z-index: 5;
 }
 
 .month-cell.is-drop-target {
-  background: var(--color-accent-soft);
-  outline: 2px solid var(--color-accent);
-  outline-offset: -2px;
+  --column-bg: var(--color-accent-soft);
+}
+
+.month-cell.is-drop-target::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--color-accent);
+  border-radius: 0;
+  pointer-events: none;
+  z-index: 5;
 }
 
 .cell-head {
@@ -282,22 +313,12 @@ function onDrop(key: string, event: DragEvent): void {
   min-width: 0;
 }
 
-.cell-badge {
-  align-self: center;
-}
-
 .cell-day {
   margin-right: auto;
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-medium);
   /* 非选中日期略微降低对比度（仍清晰可读） */
   color: var(--color-text-secondary);
-}
-
-.cell-duration {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-muted);
-  white-space: nowrap;
 }
 
 .cell-day.is-complete {
@@ -353,82 +374,46 @@ function onDrop(key: string, event: DragEvent): void {
   color: var(--color-accent-text);
 }
 
-/* 空白区域：点击即为该日期新增任务 */
-.cell-blank {
+/* ---------- 任务圆点（极简显示：只有科目主题色圆点） ---------- */
+
+.cell-dots {
   display: flex;
-  flex: 1;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: center;
-  min-height: 18px;
-  margin-top: 2px;
-  border: 1px dashed transparent;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--color-text-muted);
-  font-size: var(--font-size-xs);
-  cursor: pointer;
-  opacity: 0.35;
-  transition: opacity 0.12s ease;
-}
-
-.month-cell:hover .cell-blank,
-.cell-blank:focus-visible {
-  border-color: var(--color-border);
-  opacity: 1;
-}
-
-.cell-tasks {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-height: 0;
-  padding: 0;
-  margin: 0;
-  overflow: hidden;
-  list-style: none;
-}
-
-/* 任务条目：科目色点 + 任务标题（超出省略，完整内容见 title） */
-.cell-task {
-  display: flex;
-  align-items: center;
+  /* 圆点之间留 4px 间距：多个任务清晰可数，也不重叠 */
   gap: 4px;
   min-width: 0;
-  padding: 1px 4px;
-  border-radius: var(--radius-sm);
-  background: var(--color-surface-subtle);
-  font-size: var(--font-size-xs);
-  line-height: 1.6;
+  padding: 1px 0;
   cursor: pointer;
 }
 
-.cell-task:hover {
-  background: var(--color-bg);
-}
-
-.cell-task-dot {
-  width: 6px;
-  height: 6px;
+.cell-dot {
+  width: 7px;
+  height: 7px;
   flex-shrink: 0;
   border-radius: 50%;
+  /* 浅色底上的小面积色块：加一层极淡描边保证边界清晰 */
+  box-shadow: 0 0 0 1px rgba(17, 20, 24, 0.08);
 }
 
-.cell-task-text {
-  min-width: 0;
-  color: var(--text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+/* 已完成任务：圆点保留但降低透明度（完成状态语义不变） */
+.cell-dot.is-done {
+  opacity: 0.3;
 }
 
-.cell-task.is-done .cell-task-text {
+.cell-dots-more {
   color: var(--text-muted);
-  text-decoration: line-through;
+  font-size: 10px;
+  line-height: 1;
 }
 
-.cell-task-more {
-  padding-left: 4px;
-  color: var(--text-muted);
-  font-size: var(--font-size-xs);
+/* 空白区域：点击即为该日期新增任务（没有加号图标，悬停反馈由格子统一的叠加层提供） */
+
+.cell-blank {
+  flex: 1;
+  min-height: 16px;
+  margin-top: 2px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
 }
 </style>

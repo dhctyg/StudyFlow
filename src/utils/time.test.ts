@@ -1,7 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import {
-  defaultEndTimeFor,
-  defaultStartTimeFor,
   intervalsOverlap,
   isEndTimeAfterStart,
   isValidTime,
@@ -97,21 +95,5 @@ describe('intervalsOverlap', () => {
     expect(intervalsOverlap({ start: 540, end: 610 }, { start: 600, end: 660 })).toBe(true)
     expect(intervalsOverlap({ start: 540, end: 700 }, { start: 600, end: 660 })).toBe(true)
     expect(intervalsOverlap({ start: 600, end: 660 }, { start: 540, end: 700 })).toBe(true)
-  })
-})
-
-describe('表单默认时间', () => {
-  it('defaultEndTimeFor = 开始 + 60 分钟，且收敛到 23:59', () => {
-    expect(defaultEndTimeFor('09:00')).toBe('10:00')
-    expect(defaultEndTimeFor('23:30')).toBe('23:59')
-    expect(defaultEndTimeFor('')).toBe('')
-  })
-
-  it('defaultStartTimeFor：今天取下一整点并收敛到 8–22 点，其他日期 09:00', () => {
-    const today = '2026-10-10'
-    expect(defaultStartTimeFor(today, today, new Date(2026, 9, 10, 14, 20))).toBe('15:00')
-    expect(defaultStartTimeFor(today, today, new Date(2026, 9, 10, 23, 30))).toBe('22:00')
-    expect(defaultStartTimeFor(today, today, new Date(2026, 9, 10, 1, 0))).toBe('08:00')
-    expect(defaultStartTimeFor('2026-10-11', today, new Date(2026, 9, 10, 14, 20))).toBe('09:00')
   })
 })

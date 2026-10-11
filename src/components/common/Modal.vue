@@ -64,14 +64,20 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: 12vh var(--space-4) var(--space-4);
+  /* 顶部留白收紧：弹窗更快进入视线，也不浪费纵向空间 */
+  padding: 7vh var(--space-4) var(--space-4);
   background: var(--color-overlay);
 }
 
 .modal-panel {
   width: 100%;
-  max-width: 460px;
-  max-height: 76vh;
+  /**
+   * 弹窗加宽：设置 / 倒计时 / 轮次 / 科目与任务表单内的滑块、标签与数值不再拥挤。
+   * 用 min() 同时给出响应式上限，窄屏（含 320px）不会超出视口，也不会出现横向滚动。
+   */
+  max-width: min(600px, calc(100vw - var(--space-4) * 2));
+  /* 允许更高的内容区，减少内部滚动次数 */
+  max-height: 84vh;
   overflow-y: auto;
   background: var(--card-bg);
   /* 弹窗与卡片统一 16px 圆角；不加边框，靠阴影分层 */

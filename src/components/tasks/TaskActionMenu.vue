@@ -27,9 +27,12 @@ const emit = defineEmits<{
   close: []
 }>()
 
+/** 贴边回收时使用的估算尺寸（与 .task-menu 的实际宽度保持一致） */
+const MENU_WIDTH = 224
+
 /** 贴近视口边缘时向内收，避免菜单被裁掉 */
 const position = computed(() => {
-  const width = 190
+  const width = MENU_WIDTH
   const height = 52 + props.items.length * 30
   const left = Math.max(8, Math.min(props.x, window.innerWidth - width - 8))
   const top = Math.max(8, Math.min(props.y, window.innerHeight - height - 8))
@@ -67,7 +70,9 @@ const position = computed(() => {
 
 .task-menu {
   position: fixed;
-  min-width: 190px;
+  /* 与 MENU_WIDTH 保持一致：菜单更宽，任务标题与提示不再被挤成省略号 */
+  min-width: 224px;
+  max-width: calc(100vw - var(--space-4));
   padding: var(--space-1);
   border: 1px solid var(--card-border);
   border-radius: var(--radius-md);

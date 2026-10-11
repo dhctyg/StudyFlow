@@ -88,7 +88,7 @@ function sanitizeTask(value: unknown, subjectIds: ReadonlySet<string>, subtaskId
   const record = value as Record<string, unknown>
   if (typeof record.id !== 'string' || record.id === '') return null
   /**
-   * 日期：null / 缺失 = 未安排日期（临时任务箱）。
+   * 日期兼容：null / 缺失 = 未安排日期（历史数据 / 外部导入；界面已无该入口）。
    * 其它写法（YYYY/M/D、'YYYY-MM-DDT…' 的 ISO 串等）**归一化**为本地日历日后保留；
    * 只有完全无法识别的才算脏数据丢弃 —— 避免旧数据 / 外部导入的任务在读取时凭空消失。
    */

@@ -7,9 +7,10 @@ import { createTask, init, selectDate, toggleTaskDone } from '../../store/schedu
 import { addDaysKey, todayKey } from '../../utils/date'
 
 /**
- * 任务面板三页签测试（阶段六）：
- * 1 当日安排 = 当前选定日期的任务；2 逾期任务 = 未完成且已逾期；3 临时任务箱 = 未指定日期。
- * 同时验证：已完成任务不再出现在逾期页；已排期的任务不会重复出现在临时任务箱。
+ * 任务面板测试：
+ * 1 当日安排 = 当前选定日期的任务；2 逾期任务 = 未完成且已逾期。
+ * 同时验证：已完成任务不再出现在逾期页；「临时任务箱」页签已移除，
+ * 未排期的历史任务只通过面板顶部的兼容提示 + 一次性安排入口处理（不改写数据）。
  */
 
 const SEED_SUBJECTS = [{ id: 'math', name: '数学', color: '#c15f5c' }]
@@ -63,7 +64,6 @@ function addTask(date: string | null, content: string, done = false): void {
   })
   if (done) toggleTaskDone(task.id)
 }
-
 const today = todayKey()
 const yesterday = addDaysKey(today, -1)
 const tomorrow = addDaysKey(today, 1)
@@ -82,17 +82,16 @@ async function switchTo(wrapper: ReturnType<typeof mountPanel>, label: string): 
   await tab!.trigger('click')
 }
 
-describe('任务面板：三个可切换页面', () => {
+describe('任务面板：两个可切换页面', () => {
   beforeEach(() => {
     useStorage()
   })
 
-  it('三个页签按 当日安排 / 逾期任务 / 临时任务箱 排列，默认显示当日安排', () => {
+  it('两个页签按 当日安排 / 逾期任务 排列，默认显示当日安排', () => {
     const wrapper = mountPanel()
     expect(wrapper.findAll('.tab-btn').map((btn) => btn.text().replace(/\d+$/, ''))).toEqual([
       '当日安排',
       '逾期任务',
-      '临时任务箱',
     ])
     expect(wrapper.findAll('.tab-btn')[0]!.attributes('aria-selected')).toBe('true')
   })
@@ -129,31 +128,40 @@ describe('任务面板：三个可切换页面', () => {
     expect(texts).not.toContain('今天任务未完成')
   })
 
-  it('临时任务箱只包含未指定日期的任务，已排期任务不重复出现', async () => {
-    addTask(null, '临时任务')
+  it('未排期的历史任务不再有独立页签：顶部提示 + 一键安排到当前日期（不改写其它数据）', async () => {
+    addTask(null, '旧的未排期任务')
     addTask(today, '今天的任务')
-    addTask(yesterday, '逾期未完成')
     selectDate(today)
 
     const wrapper = mountPanel()
-    await switchTo(wrapper, '临时任务箱')
+    // 页签只有两个，未排期任务不出现在任何页签里
+    expect(wrapper.findAll('.tab-btn')).toHaveLength(2)
+    expect(rowTexts(wrapper).join(' ')).not.toContain('旧的未排期任务')
 
-    const texts = rowTexts(wrapper).join(' ')
-    expect(texts).toContain('临时任务')
-    expect(texts).not.toContain('今天的任务')
-    expect(texts).not.toContain('逾期未完成')
+    // 顶部兼容提示明确给出数量与安排入口
+    const prompt = wrapper.find('.legacy-prompt')
+    expect(prompt.exists()).toBe(true)
+    expect(prompt.text()).toContain('1 个旧任务未安排日期')
+
+    await prompt.find('.link-btn').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    // 安排到当前选中日期后，任务出现在「当日安排」中，且记录没有被复制
+    expect(rowTexts(wrapper).join(' ')).toContain('旧的未排期任务')
+    expect(wrapper.find('.legacy-prompt').exists()).toBe(false)
   })
 
-  it('切换页签只替换面板内容（三个分组不会同时渲染）', async () => {
-    addTask(null, '临时任务')
+  it('切换页签只替换面板内容（两个分组不会同时渲染）', async () => {
     addTask(today, '今天的任务')
+    addTask(yesterday, '逾期任务')
     selectDate(today)
 
     const wrapper = mountPanel()
     expect(wrapper.findAll('.panel-section')).toHaveLength(1)
-    await switchTo(wrapper, '临时任务箱')
+    await switchTo(wrapper, '逾期任务')
     await wrapper.vm.$nextTick()
     expect(wrapper.findAll('.panel-section')).toHaveLength(1)
     expect(rowTexts(wrapper).join(' ')).not.toContain('今天的任务')
+    expect(rowTexts(wrapper).join(' ')).toContain('逾期任务')
   })
 })

@@ -2,8 +2,9 @@
 import AppIcon from '../common/AppIcon.vue'
 
 /**
- * 顶部标题栏：左侧产品名，右侧「倒计时 / 轮次 / 科目」三个独立入口 + 设置。
- * 三个入口统一为「图标 + 文字」；窄屏自动压缩为图标（保留 aria-label 与 title）。
+ * 顶部标题栏：左侧产品名，右侧「倒计时 / 轮次 / 科目 / 设置」四个独立入口。
+ * 四个入口统一为「图标 + 文字」：同一套高度、圆角、间距、图标尺寸与交互状态
+ * （窄屏自动压缩为图标，保留 aria-label 与 title）。
  */
 const emit = defineEmits<{
   openSettings: []
@@ -16,12 +17,14 @@ const ENTRIES = [
   { id: 'countdown', label: '倒计时', icon: 'clock' },
   { id: 'rounds', label: '轮次', icon: 'calendar' },
   { id: 'subjects', label: '科目', icon: 'tasks' },
+  { id: 'settings', label: '设置', icon: 'settings' },
 ] as const
 
 function onEntry(id: (typeof ENTRIES)[number]['id']): void {
   if (id === 'countdown') emit('openCountdown')
   else if (id === 'rounds') emit('openRounds')
-  else emit('openSubjects')
+  else if (id === 'subjects') emit('openSubjects')
+  else emit('openSettings')
 }
 </script>
 
@@ -35,6 +38,7 @@ function onEntry(id: (typeof ENTRIES)[number]['id']): void {
         :key="entry.id"
         type="button"
         class="bar-entry"
+        :class="{ 'is-settings': entry.id === 'settings' }"
         :title="entry.label"
         :aria-label="entry.label"
         @click="onEntry(entry.id)"
@@ -43,16 +47,6 @@ function onEntry(id: (typeof ENTRIES)[number]['id']): void {
         <span class="entry-label">{{ entry.label }}</span>
       </button>
     </nav>
-
-    <button
-      type="button"
-      class="bar-btn"
-      aria-label="设置"
-      title="设置"
-      @click="emit('openSettings')"
-    >
-      <AppIcon name="settings" size="lg" />
-    </button>
   </header>
 </template>
 
@@ -66,7 +60,6 @@ function onEntry(id: (typeof ENTRIES)[number]['id']): void {
   padding: 0 var(--card-gap);
   background: var(--card-bg);
 }
-
 .brand {
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
@@ -108,26 +101,8 @@ function onEntry(id: (typeof ENTRIES)[number]['id']): void {
   color: var(--text-primary);
 }
 
-.bar-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: var(--button-height);
-  height: var(--button-height);
-  border: none;
-  border-radius: var(--button-radius);
-  background: transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition:
-    background-color 0.12s ease,
-    color 0.12s ease;
-}
-
-.bar-btn:hover {
-  background: var(--color-bg);
-  color: var(--text-primary);
+.bar-entry:active {
+  background: var(--color-accent-soft);
 }
 
 /* 窄屏：入口压缩为图标（语义由 title / aria-label 保留），不造成标题栏溢出 */

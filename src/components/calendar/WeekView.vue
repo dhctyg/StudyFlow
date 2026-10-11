@@ -22,7 +22,7 @@ import { hasTaskDrag, readTaskDragId, startTaskDrag } from '../../utils/taskDrag
  * - 不打日期数量 / 时长统计；选中日期用描边 + 轻微光晕；
  * - 点击列内空白区域 → 新增任务并默认填入该日期（点击任务卡片只打开编辑，不会误触发新增）；
  * - 右键列内任意位置，或点击表头的「⋯」，都可设置日期类型（普通日 / 休息日 / 缓冲日）；
- * - 从右侧任务列表或任务箱拖入任务 → 修改**原任务**的日期（不复制任务，不顺延其它任务）。
+ * - 从右侧任务列表拖入任务 → 修改**原任务**的日期（不复制任务，不顺延其它任务）。
  */
 const emit = defineEmits<{
   edit: [task: Task]
@@ -61,26 +61,12 @@ const days = computed<DayColumn[]>(() =>
 )
 
 /**
- * 列宽按本周最长任务内容估算（七天统一），超出面板宽度时在日历内部横向滚动，
- * 保证任务文字不被压成省略号，且日期表头 / 网格线与任务卡片始终对齐。
+ * 七列等分面板宽度：`repeat(7, minmax(0, 1fr))`。
+ *
+ * 不再按任务内容估算列宽，也不设置最小宽度 —— 周一至周日始终完整显示在日历卡片内，
+ * 任何窗口尺寸下都不会出现横向滚动条（列只会变窄，不会把内容推出卡片）。
+ * 列内空间用紧凑内边距 / 字号与可换行的任务文字消化。
  */
-const COLUMN_MIN_WIDTH = 132
-const COLUMN_MAX_WIDTH = 260
-const CHAR_WIDTH_ESTIMATE = 13
-const COLUMN_EXTRA_WIDTH = 40
-
-const columnWidth = computed(() => {
-  let longest = 0
-  for (const day of days.value) {
-    for (const task of day.tasks) {
-      if (task.content.length > longest) longest = task.content.length
-    }
-  }
-  const estimated = longest * CHAR_WIDTH_ESTIMATE + COLUMN_EXTRA_WIDTH
-  return Math.max(COLUMN_MIN_WIDTH, Math.min(COLUMN_MAX_WIDTH, estimated))
-})
-
-const weekMinWidth = computed(() => `${Math.round(columnWidth.value) * 7}px`)
 
 /** 拖拽悬停的列（纯界面状态，不写入任何数据） */
 const dropTarget = ref<string | null>(null)
@@ -127,10 +113,10 @@ function onTaskDragStart(task: Task, event: DragEvent): void {
 </script>
 
 <template>
-  <div class="week-view" :style="{ '--week-min-width': weekMinWidth }">
+  <div class="week-view">
     <div class="week-scroll">
       <!-- 星期标题：独立圆角方框，位于日期网格上方并与列对齐（不插入日期格） -->
-      <WeekdayHeader :min-width="weekMinWidth" />
+      <WeekdayHeader />
 
       <div class="week-grid">
         <section
@@ -152,7 +138,9 @@ function onTaskDragStart(task: Task, event: DragEvent): void {
         >
           <header class="day-head" @click="selectDate(day.key)">
             <div class="head-line">
-              <span class="head-day tabular">{{ day.day }}</span>
+              <span class="head-day tabular" :class="{ 'is-complete': day.isComplete }">
+                {{ day.day }}
+              </span>
               <button
                 type="button"
                 class="head-menu"
@@ -163,11 +151,15 @@ function onTaskDragStart(task: Task, event: DragEvent): void {
                 ⋯
               </button>
             </div>
-
-            <span v-if="day.isComplete" class="badge-complete head-badge">完成</span>
+            <!-- 日期下方不再显示「完成」标签：完成状态由日期数字颜色 + 任务删除线表示 -->
           </header>
 
-          <div class="day-body" @click="onColumnClick(day)">
+          <!--
+            列内空白区域：整列（除任务卡片与表头按钮）都是「新增任务」的点击区，
+            没有加号占位元素；点击已有任务卡片只会打开编辑（TaskCard 内部 @click.stop），
+            两种操作不会互相触发。
+          -->
+          <div class="day-body" title="点击空白处新增任务" @click="onColumnClick(day)">
             <TaskCard
               v-for="task in day.tasks"
               :key="task.id"
@@ -176,7 +168,6 @@ function onTaskDragStart(task: Task, event: DragEvent): void {
               @dragstart="onTaskDragStart(task, $event)"
               @edit="emit('edit', $event)"
             />
-            <p v-if="day.tasks.length === 0" class="day-empty">＋</p>
           </div>
         </section>
       </div>
@@ -187,9 +178,9 @@ function onTaskDragStart(task: Task, event: DragEvent): void {
 
 <style scoped>
 .week-view {
-  /* 窄屏时在日历面板内部横向滚动（实际宽度由组件按最长内容估算），七天共用同一列宽 */
-  --week-min-width: 924px;
+  /* 七列等分：宽度完全由面板决定，永不出现横向滚动 */
   height: 100%;
+  min-width: 0;
   min-height: 0;
   background: var(--color-surface);
   overflow: hidden;
@@ -200,40 +191,46 @@ function onTaskDragStart(task: Task, event: DragEvent): void {
   flex-direction: column;
   height: 100%;
   min-height: 0;
-  overflow: auto;
+  /* 只允许纵向滚动；横向不滚动，七天始终完整可见 */
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .week-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  min-width: var(--week-min-width);
   /* 占满剩余高度（内容更高时由滚动容器滚动），七天列高始终一致 */
   flex: 1 0 auto;
+  min-width: 0;
 }
 
 .day-column {
+  /**
+   * 整列底色统一由 --column-bg 决定：日期行与任务区共用同一个变量，
+   * 因此休息日 / 缓冲日的底色会贯穿整列，选中态也不会把任务区变白。
+   */
+  --column-bg: var(--color-surface);
   position: relative;
   display: flex;
   flex-direction: column;
   min-width: 0;
-  min-height: 240px;
+  min-height: 200px;
   border-left: 1px solid var(--color-grid-divider);
-  transition:
-    background-color 0.12s ease,
-    box-shadow 0.12s ease;
+  background: var(--column-bg);
+  transition: background-color 0.12s ease;
 }
 
 .day-column:first-child {
   border-left: none;
 }
 
-/* 休息日 / 缓冲日：用单元格底色 + 表头下边缘色低调区分（不再显示文字标签，也不改变行高） */
+/* 休息日 / 缓冲日：只换整列底色变量 + 表头下边缘色（不显示文字标签，也不改变行高） */
 .day-column.is-rest {
-  background: var(--color-rest-bg);
+  --column-bg: var(--color-rest-bg);
 }
 
 .day-column.is-buffer {
-  background: var(--color-buffer-bg);
+  --column-bg: var(--color-buffer-bg);
 }
 
 .day-column.is-rest .day-head {
@@ -244,29 +241,57 @@ function onTaskDragStart(task: Task, event: DragEvent): void {
   border-bottom-color: var(--color-buffer-badge-border);
 }
 
-/* 悬停：与选中态明显不同（浅底，无描边） */
-.day-column:hover:not(.is-selected):not(.is-drop-target) {
-  background: var(--color-bg);
+/* 悬停：普通列给中性浅底；休息 / 缓冲列保留自己的底色（只用极淡叠加层提示可点击） */
+.day-column:not(.is-rest):not(.is-buffer):hover:not(.is-selected):not(.is-drop-target) {
+  --column-bg: var(--color-bg);
 }
 
-/* 选中日期：清晰描边 + 轻微光晕（不改变尺寸、不产生重叠） */
-.day-column.is-selected {
-  outline: 2px solid var(--color-accent);
-  outline-offset: -2px;
-  box-shadow: 0 0 12px rgba(47, 51, 54, 0.16);
-  background: var(--color-surface);
+.day-column.is-rest:hover:not(.is-selected):not(.is-drop-target) .day-body,
+.day-column.is-buffer:hover:not(.is-selected):not(.is-drop-target) .day-body {
+  box-shadow: inset 0 0 0 999px rgba(17, 20, 24, 0.03);
 }
 
-/* 键盘焦点：列内任一控件获得焦点时也给出可见提示 */
-.day-column:focus-within:not(.is-selected) {
-  outline: 2px dashed var(--color-accent);
-  outline-offset: -2px;
+/**
+ * 选中列：用伪元素绘制「覆盖整列」的直角描边。
+ * - 表头是 position: sticky（z-index 2），普通 outline / border 会被它盖住顶部，
+ *   因此用 ::after + 更高 z-index 画在最上层，日期行与任务区四周都完整；
+ * - pointer-events: none 保证不遮挡任务文字与点击区域；
+ * - 不使用圆角，与列分隔线风格统一，也避免与卡片圆角冲突。
+ */
+.day-column.is-selected::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--color-accent);
+  border-radius: 0;
+  pointer-events: none;
+  z-index: 5;
 }
 
+/* 键盘焦点：与选中态同款完整描边（虚线区分） */
+.day-column:focus-within:not(.is-selected)::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 2px dashed var(--color-accent);
+  border-radius: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* 拖拽落点：整列描边 + 底色提示 */
 .day-column.is-drop-target {
-  background: var(--color-accent-soft);
-  outline: 2px solid var(--color-accent);
-  outline-offset: -2px;
+  --column-bg: var(--color-accent-soft);
+}
+
+.day-column.is-drop-target::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--color-accent);
+  border-radius: 0;
+  pointer-events: none;
+  z-index: 5;
 }
 
 .day-head {
@@ -275,19 +300,13 @@ function onTaskDragStart(task: Task, event: DragEvent): void {
   z-index: 2;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: var(--space-1) var(--space-2) var(--space-2);
+  gap: 0;
+  /* 表头也收紧：给任务卡片留出更多纵向空间 */
+  padding: 3px 6px 5px;
   border-bottom: 1px solid var(--color-grid-divider);
-  background: var(--color-surface);
+  /* 与整列底色一致：sticky 滚动时不会露出白色底 */
+  background: var(--column-bg);
   cursor: pointer;
-}
-
-.day-column.is-rest .day-head {
-  background: var(--color-rest-bg);
-}
-
-.day-column.is-buffer .day-head {
-  background: var(--color-buffer-bg);
 }
 
 .head-line {
@@ -297,10 +316,17 @@ function onTaskDragStart(task: Task, event: DragEvent): void {
 }
 
 .head-day {
-  font-size: var(--font-size-lg);
+  /* 日期辨识度优先，但比原来小一档，给列宽与列高让位 */
+  font-size: var(--font-size-md);
   font-weight: var(--font-weight-medium);
   /* 非选中日期略微降低对比度（仍清晰可读） */
   color: var(--color-text-secondary);
+}
+
+/* 当天任务全部完成：日期数字用保留色（绿色），不再额外显示标签 */
+.head-day.is-complete {
+  color: var(--color-success);
+  font-weight: var(--font-weight-semibold);
 }
 
 .day-column.is-selected .head-day,
@@ -309,18 +335,19 @@ function onTaskDragStart(task: Task, event: DragEvent): void {
   font-weight: var(--font-weight-semibold);
 }
 
-.head-badge {
-  align-self: flex-start;
+.day-column.is-selected .head-day.is-complete,
+.day-column.is-today .head-day.is-complete {
+  color: var(--color-success);
 }
 
 .head-menu {
   margin-left: auto;
-  padding: 0 4px;
+  padding: 0 3px;
   border: none;
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--color-text-muted);
-  font-size: var(--font-size-base);
+  font-size: var(--font-size-sm);
   line-height: 1;
   cursor: pointer;
 }
@@ -334,24 +361,17 @@ function onTaskDragStart(task: Task, event: DragEvent): void {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 3px;
+  /* 紧凑内边距 / 间距：七列等分后仍能容纳任务文字（文字自然换行，不做省略号截断） */
+  gap: 2px;
   min-height: 0;
-  padding: var(--space-2);
+  padding: 4px;
   cursor: pointer;
+  transition: box-shadow 0.12s ease;
 }
 
-.day-empty {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  justify-content: center;
-  min-height: 40px;
-  margin: 0;
-  border: 1px dashed var(--color-border);
-  border-radius: var(--radius-md);
-  color: var(--text-muted);
-  font-size: var(--font-size-base);
-  opacity: 0.6;
+/* 空白区域的点击反馈：极淡叠加层，不改写列底色（普通 / 休息 / 缓冲列的颜色都能保留） */
+.day-body:hover {
+  box-shadow: inset 0 0 0 999px rgba(17, 20, 24, 0.025);
 }
 </style>
 

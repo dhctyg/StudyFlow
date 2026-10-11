@@ -9,7 +9,9 @@ import { formatDayTitle } from '../../utils/date'
  *
  * - 不再显示「倒计时」标题，也不放设置图标（改日期与轮次的入口在标题栏）；
  * - 只保留有用信息：考试目标、剩余天数、目标日期、各科目轮次的预计完成日期；
- * - 内部间距收紧，窄屏单列；剩余天数的计算逻辑未改动。
+ * - **高度按内容收缩**：卡片只占「考试目标 + 四科轮次」所需高度（见 tokens.css 的
+ *   --home-left-rows: auto minmax(0, 1fr)），内部上下留白、行距与数字字号都已收紧，
+ *   不再用固定比例撑出空白区域；文字保持完整可读，不做截断式压缩。
  */
 const days = computed(() => examCountdown.value?.daysRemaining ?? null)
 const absDays = computed(() => (days.value === null ? 0 : Math.abs(days.value)))
@@ -59,9 +61,14 @@ function subjectName(subjectId: string): string {
 /* 紧凑排布：左列考试目标 + 剩余天数，右列轮次日期 */
 .countdown-body {
   display: grid;
-  grid-template-columns: minmax(140px, 1fr) minmax(0, 1.7fr);
-  gap: var(--space-3) var(--block-gap);
+  grid-template-columns: minmax(120px, 1fr) minmax(0, 1.8fr);
+  gap: var(--space-2) var(--block-gap);
   align-content: start;
+  /**
+   * 垂直内边距略放大（上下各 12px）：卡片高度小幅增加，视觉比例更均衡；
+   * 四科轮次仍是一行一条，不会出现多余留白。
+   */
+  padding: var(--space-3) var(--card-pad-sm);
 }
 
 .exam-block {
@@ -83,12 +90,13 @@ function subjectName(subjectId: string): string {
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
-  gap: 0 6px;
+  gap: 0 5px;
 }
 
 .days-value {
-  font-size: 36px;
-  line-height: 1.1;
+  /* 收紧字号：仍然是最醒目的一行，但不靠巨大留白占高度 */
+  font-size: 28px;
+  line-height: 1.15;
   font-weight: var(--font-weight-semibold);
   color: var(--text-primary);
 }
@@ -115,7 +123,8 @@ function subjectName(subjectId: string): string {
 .round-list {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  /* 四科轮次单行紧凑排列：只靠行距区分，不额外加间距 */
+  gap: 0;
   padding: 0;
   margin: 0;
   list-style: none;
@@ -128,6 +137,8 @@ function subjectName(subjectId: string): string {
   justify-content: space-between;
   gap: var(--space-2);
   min-width: 0;
+  /* 行高略放大：卡片高度小幅提升，四科轮次更清晰 */
+  line-height: 1.5;
 }
 
 .round-name {

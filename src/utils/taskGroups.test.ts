@@ -38,7 +38,7 @@ describe('三类任务分组（纯函数）', () => {
     expect(isOverdueTask(task({ date: null }), '2026-10-10')).toBe(false)
   })
 
-  it('分组：今日 / 逾期（按日期升序）/ 临时任务箱，已完成不进入逾期与任务箱', () => {
+  it('分组：今日 / 逾期（按日期升序）/ 未排期，已完成不进入逾期与未排期', () => {
     const groups = partitionTasks(
       [
         task({ id: 'today-1', date: '2026-10-10' }),

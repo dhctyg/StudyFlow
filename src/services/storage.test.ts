@@ -322,7 +322,7 @@ describe('日期类型（阶段一：休息日 / 缓冲日）', () => {
     expect(loadDayTypes()).toEqual({})
   })
 
-  it('无日期的任务（临时任务箱）可安全读写', () => {
+  it('无日期的任务（历史数据兼容）可安全读写', () => {
     useStorage(withDefaults())
     saveTasks([{ ...task(), date: null, startTime: null, endTime: null }])
     const loaded = loadTasks()

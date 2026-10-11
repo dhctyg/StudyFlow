@@ -278,11 +278,11 @@ export const selectedTitle = computed(() => formatDayTitle(state.selectedDate))
 
 export const selectedDuration = computed(() => summarizeDayDuration(tasksOf(state.selectedDate)))
 
-// ---------- 三类任务（当日安排 / 逾期 / 临时任务箱） ----------
+// ---------- 三类任务（当日安排 / 逾期 / 未排期历史数据） ----------
 
 /**
  * 分组结果全部由「原任务的 date + done」动态计算：
- * 不按天生成副本、同一任务只有一份记录、已完成任务不进入逾期与临时任务箱。
+ * 不按天生成副本、同一任务只有一份记录、已完成任务不进入逾期与未排期分组。
  * 分组不受科目筛选影响（避免逾期工作被筛选隐藏）。
  */
 export const taskGroups = computed<TaskGroups>(() => partitionTasks(state.tasks, todayKey()))
@@ -293,7 +293,11 @@ export const todayTasks = computed(() => taskGroups.value.today)
 /** 逾期任务：原计划日期早于今天且未完成（按日期升序） */
 export const overdueTasks = computed(() => taskGroups.value.overdue)
 
-/** 临时任务箱：尚未设置安排日期且未完成 */
+/**
+ * 未排期任务（`date === null` 且未完成）。
+ * 界面已移除「临时任务箱」页签，此视图仅用于**兼容历史数据**：
+ * 任务面板据此提示「有 N 个旧任务未安排日期」并提供一次性安排入口，数据不会被删除或改写。
+ */
 export const unscheduledTasks = computed(() => taskGroups.value.unscheduled)
 
 // ---------- 科目筛选 ----------
@@ -327,7 +331,7 @@ export function detectTimeConflicts(input: ConflictCheckInput, excludeTaskId?: s
 
 // ---------- 任务变更 ----------
 
-/** 归一化后的任务输入：日期可为 null（临时任务箱），时间随日期放宽 */
+/** 归一化后的任务输入：日期可为 null（仅为兼容历史数据 / 外部导入保留），时间可选 */
 export interface NormalizedTaskInput {
   date: string | null
   subjectId: SubjectId
@@ -340,7 +344,11 @@ export interface NormalizedTaskInput {
 function normalizeInput(input: TaskInput): NormalizedTaskInput {
   const content = typeof input.content === 'string' ? input.content.trim() : ''
   if (content === '') throw new FieldError('content', '任务内容不能为空')
-  // 日期：null = 暂不安排（临时任务箱）；否则必须是合法 YYYY-MM-DD
+  /**
+   * 日期兼容：null = 未安排日期。
+   * 界面已不再提供「暂不安排日期」入口，此分支只用于读取历史数据 / 外部导入（CSV 空日期行），
+   * 读取时原样保留，绝不自动改写成某一天；否则必须是合法 YYYY-MM-DD。
+   */
   const date = input.date ?? null
   if (date !== null && !isDateKey(date)) throw new FieldError('date', '日期格式不正确')
   if (subjectById(input.subjectId) === undefined) throw new FieldError('subjectId', '科目不存在')
@@ -356,21 +364,26 @@ function normalizeInput(input: TaskInput): NormalizedTaskInput {
     subtaskId = subtask.id
   }
 
-  // 时间规则：
-  // - 已安排日期：必填且结束必须晚于开始（保持原校验，不支持跨午夜）；
-  // - 未安排日期（临时任务箱）：可以留空；一旦填写，开始与结束必须成对合法。
+  /**
+   * 时间规则（表单已移除「开始时间 / 结束时间」输入项）：
+   * - 时间**可选**：不填 → startTime / endTime 均为 null（新任务的常态）；
+   * - 一旦填写，必须成对合法且结束晚于开始（保持原校验，不支持跨午夜）——
+   *   这是为旧任务、CSV 导入、备份恢复保留的数据规则；
+   * - 旧数据里已有的合法时间原样保留，绝不因为改版被清空或重设。
+   */
   let startTime: string | null = null
   let endTime: string | null = null
-  const hasAnyTime =
-    (input.startTime ?? '') !== '' || (input.endTime ?? '') !== ''
-  if (date !== null || hasAnyTime) {
-    if (!isValidTime(input.startTime)) throw new FieldError('startTime', '请填写合法的开始时间（HH:mm）')
-    if (!isValidTime(input.endTime)) throw new FieldError('endTime', '请填写合法的结束时间（HH:mm）')
-    if (!isEndTimeAfterStart(input.startTime, input.endTime)) {
+  const rawStart = input.startTime ?? ''
+  const rawEnd = input.endTime ?? ''
+  const hasAnyTime = rawStart !== '' || rawEnd !== ''
+  if (hasAnyTime) {
+    if (!isValidTime(rawStart)) throw new FieldError('startTime', '请填写合法的开始时间（HH:mm）')
+    if (!isValidTime(rawEnd)) throw new FieldError('endTime', '请填写合法的结束时间（HH:mm）')
+    if (!isEndTimeAfterStart(rawStart, rawEnd)) {
       throw new FieldError('endTime', '结束时间必须晚于开始时间，本阶段不支持跨午夜')
     }
-    startTime = input.startTime
-    endTime = input.endTime
+    startTime = rawStart
+    endTime = rawEnd
   }
 
   return {
@@ -458,7 +471,7 @@ export function toggleTaskDone(id: string): void {
   persistTasks()
 }
 
-// ---------- 任务日期调整（改期 / 缓冲日 / 临时任务箱） ----------
+// ---------- 任务日期调整（改期 / 缓冲日） ----------
 
 /**
  * 移动任务到指定日期：只更新原任务的 date 字段 —— 不复制任务、不改完成状态与内容，
@@ -471,16 +484,6 @@ export function moveTaskToDate(id: string, dateKey: string, options: SaveTaskOpt
   assertRestDayAllowed(dateKey, options)
   const next = [...state.tasks]
   next[index] = { ...next[index], date: dateKey }
-  state.tasks = next
-  persistTasks()
-}
-
-/** 移入临时任务箱：清空安排日期（时间字段原样保留，仅作展示） */
-export function moveTaskToBox(id: string): void {
-  const index = state.tasks.findIndex((task) => task.id === id)
-  if (index < 0) throw new FieldError('id', '任务不存在')
-  const next = [...state.tasks]
-  next[index] = { ...next[index], date: null }
   state.tasks = next
   persistTasks()
 }

@@ -4,28 +4,22 @@ import type { Task } from '../../models/types'
 import { subjectOf, subtaskById } from '../../store/schedule'
 
 /**
- * 日历任务卡片（周视图时间轴 / 折叠条 / 溢出列表共用）。
+ * 日历任务卡片（周视图列内共用）。
  * 固定信息顺序：
  *   第一行 `科目 | 子标签`（无标签时只显示科目）
- *   第二行 `开始时间–结束时间`
+ *   第二行 `开始时间–结束时间`（**仅旧数据可能有时间**：任务表单已不再填写时间，无时间则不显示该行）
  *   第三行起 任务内容（自然换行，不做省略号截断）
  *
  * - 科目名 / 子标签名在日历展示区内最多显示 10 个字符，悬停时横向滚动显示完整名称；
  *   只限制展示宽度，不改动保存的数据。
- * - `placeholder` = 该卡片的时段是“展示用默认时段”（未安排任务的临时排布），
- *   不写回任务数据，因此时间行以虚线样式区分并在 title 中说明。
+ * - 时间行仅用于兼容旧任务（展示历史时间），不再由表单写入。
  */
 const props = withDefaults(
   defineProps<{
     task: Task
     density?: 'comfortable' | 'compact'
-    /** 展示用开始时间（'HH:mm'）：默认取任务自身时间 */
-    displayStart?: string | null
-    displayEnd?: string | null
-    /** 是否为展示用默认时段（未安排任务的临时排布） */
-    placeholder?: boolean
   }>(),
-  { density: 'comfortable', displayStart: null, displayEnd: null, placeholder: false },
+  { density: 'comfortable' },
 )
 
 const emit = defineEmits<{ edit: [task: Task] }>()
@@ -33,11 +27,11 @@ const emit = defineEmits<{ edit: [task: Task] }>()
 const subject = computed(() => subjectOf(props.task.subjectId))
 const subtaskName = computed(() => subtaskById(props.task.subtaskId)?.name ?? null)
 
+/** 旧任务的时间区间；新任务没有时间，返回 null（不渲染时间行） */
 const timeText = computed(() => {
-  const start = props.displayStart ?? props.task.startTime
-  const end = props.displayEnd ?? props.task.endTime
-  if (start === null || end === null) return null
-  return `${start}–${end}`
+  const { startTime, endTime } = props.task
+  if (startTime === null || endTime === null) return null
+  return `${startTime}–${endTime}`
 })
 
 const title = computed(() => {
@@ -45,7 +39,6 @@ const title = computed(() => {
   if (subtaskName.value !== null) parts.push(subtaskName.value)
   if (timeText.value !== null) parts.push(timeText.value)
   parts.push(props.task.content)
-  if (props.placeholder) parts.push('（临时展示时段，未保存到任务）')
   return parts.join(' | ')
 })
 </script>
@@ -73,10 +66,7 @@ const title = computed(() => {
         </template>
       </span>
 
-      <span v-if="timeText" class="card-time tabular" :class="{ 'is-placeholder': placeholder }">
-        {{ timeText }}
-      </span>
-      <span v-else class="card-untimed">未安排时间</span>
+      <span v-if="timeText" class="card-time tabular">{{ timeText }}</span>
 
       <span class="card-content">{{ task.content }}</span>
     </span>
@@ -186,24 +176,13 @@ const title = computed(() => {
   color: var(--color-border-strong);
 }
 
-/* ---------- 第二行：开始时间–结束时间 ---------- */
+/* ---------- 第二行：开始时间–结束时间（仅旧任务有时间） ---------- */
 
 .card-time {
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
   font-weight: var(--font-weight-regular);
   white-space: nowrap;
-}
-
-/* 展示用默认时段：虚线提示“临时排布，未写入任务” */
-.card-time.is-placeholder {
-  border-bottom: 1px dashed var(--color-border-strong);
-  align-self: flex-start;
-}
-
-.card-untimed {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-muted);
 }
 
 /* ---------- 第三行起：任务内容 ---------- */

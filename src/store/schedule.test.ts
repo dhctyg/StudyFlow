@@ -24,7 +24,6 @@ import {
   init,
   isBufferDay,
   isRestDay,
-  moveTaskToBox,
   moveTaskToBufferDay,
   moveTaskToDate,
   overdueTasks,
@@ -653,9 +652,9 @@ describe('日期类型（普通日 / 休息日 / 缓冲日）', () => {
   })
 })
 
-// ---------- 阶段一：三类任务（当日安排 / 逾期 / 临时任务箱） ----------
+// ---------- 阶段一：三类任务（当日安排 / 逾期 / 未排期历史数据） ----------
 
-describe('三类任务：当日安排 / 逾期 / 临时任务箱', () => {
+describe('三类任务：当日安排 / 逾期 / 未排期历史数据', () => {
   it('逾期由「原任务日期 + 完成状态」动态计算：不生成副本，完成后移出列表', () => {
     const today = todayKey()
     const overdue = createTask(input({ date: addDaysKey(today, -3), content: '三天前' }))
@@ -671,7 +670,7 @@ describe('三类任务：当日安排 / 逾期 / 临时任务箱', () => {
     expect(tasks.value).toHaveLength(3) // 完成只改状态，记录数不变
   })
 
-  it('未安排日期的任务进入临时任务箱，不属于任何一天', () => {
+  it('未排期的任务（date 为 null）不属于任何一天，且刷新后可安全读回', () => {
     const boxed = createTask(
       input({ date: null, startTime: '', endTime: '', content: '临时任务' }),
     )
@@ -685,12 +684,19 @@ describe('三类任务：当日安排 / 逾期 / 临时任务箱', () => {
     expect(raw[0].date).toBeNull()
   })
 
-  it('已安排日期的任务仍要求填写时间（原校验不变）', () => {
-    expect(() => createTask(input({ startTime: '', endTime: '' }))).toThrow(FieldError)
+  it('已安排日期也可以不带时间（表单已移除开始 / 结束时间输入项）', () => {
+    const task = createTask(input({ startTime: '', endTime: '' }))
+    expect(task.startTime).toBeNull()
+    expect(task.endTime).toBeNull()
+    expect(tasks.value).toHaveLength(1)
+    // 无时间的任务不参与时长统计，但仍计入当天任务与完成状态
+    expect(durationOf('2026-10-10').untimedTaskCount).toBe(1)
+    expect(durationOf('2026-10-10').plannedMinutes).toBe(0)
+    expect(statusOf('2026-10-10')).toBe('pending')
   })
 })
 
-// ---------- 阶段一：任务日期调整（改期 / 缓冲日 / 任务箱） ----------
+// ---------- 阶段一：任务日期调整（改期 / 缓冲日） ----------
 
 describe('任务日期调整', () => {
   it('改期只更新原任务的日期：不复制任务、不影响其它任务', () => {
@@ -737,13 +743,16 @@ describe('任务日期调整', () => {
     )
   })
 
-  it('移入临时任务箱：清空日期，时间字段原样保留', () => {
-    const task = createTask(input({ date: todayKey() }))
-    moveTaskToBox(task.id)
-    const stored = taskById(task.id)
-    expect(stored?.date).toBeNull()
-    expect(stored?.startTime).toBe('09:00')
-    expect(unscheduledTasks.value.map((item) => item.id)).toEqual([task.id])
+  it('历史数据兼容：date 为 null 的旧任务可读取，并可被安排到具体日期', () => {
+    const legacy = createTask(input({ date: null, startTime: '', endTime: '' }))
+    expect(legacy.date).toBeNull()
+    expect(unscheduledTasks.value.map((item) => item.id)).toEqual([legacy.id])
+
+    // 用户主动安排（任务面板的兼容入口）：只更新原任务日期，不复制任务
+    moveTaskToDate(legacy.id, todayKey())
+    expect(taskById(legacy.id)?.date).toBe(todayKey())
+    expect(unscheduledTasks.value).toHaveLength(0)
+    expect(tasks.value).toHaveLength(1)
   })
 
   it('改期与日期类型刷新后仍然有效', () => {

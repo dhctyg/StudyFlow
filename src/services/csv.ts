@@ -7,8 +7,8 @@
  * 导入：严格校验表头；逐行处理空行 / 非法日期 / 非法时间 / 未知科目 / 重复任务；
  *      默认**跳过**重复任务（绝不静默覆盖已有数据），并把每一处问题回报给界面预览。
  *
- * 与业务规则保持一致：已安排日期的任务必须有开始与结束时间（沿用第一阶段校验）；
- * 未安排日期（临时任务箱）的行可以留空时间。
+ * 与业务规则保持一致：**时间可以留空**（任务表单已不再填写开始 / 结束时间）；
+ * 一旦填写，必须成对合法且结束晚于开始；未安排日期（date 为空）的行依旧兼容读取。
  */
 import type { Task, TaskInput } from '../models/types'
 import { isDateKey } from '../utils/date'
@@ -243,11 +243,8 @@ export function parseTaskCsv(text: string, context: TaskCsvContext): CsvImportRe
       continue
     }
 
-    if (date !== null && (startTime === null || endTime === null)) {
-      result.issues.push({ line, reason: '已安排日期的任务需要开始与结束时间' })
-      continue
-    }
-    if (date === null && (startTime === null) !== (endTime === null)) {
+    // 时间可选（表单已不再填写时间）：留空即无时间；一旦填写必须成对，且结束晚于开始
+    if ((startTime === null) !== (endTime === null)) {
       result.issues.push({ line, reason: '开始与结束时间需要同时填写' })
       continue
     }

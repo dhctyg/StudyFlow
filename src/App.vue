@@ -21,14 +21,13 @@ import {
   setDayType,
 } from './store/schedule'
 import { formatDayTitle, todayKey } from './utils/date'
-import { defaultStartTimeFor } from './utils/time'
 
 /**
  * 首页布局（阶段四）。
  *
  * - 顶部标题栏：产品名 +「倒计时 / 轮次 / 科目」三个管理入口 + 设置；
  * - 左栏：倒计时卡片 + 日历卡片；
- * - 右栏：任务面板（当日安排 / 逾期任务 / 临时任务箱）占满整列；
+ * - 右栏：任务面板（当日安排 / 逾期任务）占满整列；
  * - 列比例 / 卡片间距 / 内边距全部来自 tokens.css 的 UI 定制参数，窄屏自动单列。
  *
  * 这里只做「表单 / 弹窗 / 反馈」的编排：任务增删改、日期类型、拖放、导入导出
@@ -41,9 +40,8 @@ const subjectsOpen = ref(false)
 const countdownOpen = ref(false)
 const roundsOpen = ref(false)
 const editingTask = ref<Task | null>(null)
-/** 默认日期：null = 直接放入临时任务箱（暂不安排） */
-const defaultDate = ref<string | null>(todayKey())
-const defaultStartTime = ref('09:00')
+/** 新建任务时的默认日期（任务始终带日期；未排期分支只为兼容历史数据保留） */
+const defaultDate = ref<string>(todayKey())
 
 /** 日期类型菜单（右键或「⋯」触发，周 / 月视图共用） */
 const dayMenu = ref<{ dateKey: string; x: number; y: number } | null>(null)
@@ -62,19 +60,18 @@ function showNotice(message: string): void {
   }, 6000)
 }
 
-function openCreate(dateKey?: string | null, startTime?: string): void {
+function openCreate(dateKey?: string): void {
   const targetDate = dateKey === undefined ? selectedDate.value : dateKey
   editingTask.value = null
   defaultDate.value = targetDate
-  defaultStartTime.value = startTime ?? defaultStartTimeFor(targetDate ?? todayKey(), todayKey())
-  if (typeof targetDate === 'string') selectDate(targetDate)
+  selectDate(targetDate)
   formOpen.value = true
 }
 
 function openEdit(task: Task): void {
   editingTask.value = task
-  defaultDate.value = task.date
-  defaultStartTime.value = task.startTime ?? defaultStartTimeFor(task.date ?? todayKey(), todayKey())
+  // 历史任务可能没有日期（date = null）：表单会给出当前选中日期作为兜底默认值
+  defaultDate.value = task.date ?? selectedDate.value
   formOpen.value = true
 }
 
@@ -152,7 +149,7 @@ function onConfirmRestMove(): void {
         />
       </div>
 
-      <!-- 右栏：任务面板（当日安排 / 逾期任务 / 临时任务箱）占满整列 -->
+      <!-- 右栏：任务面板（当日安排 / 逾期任务）占满整列 -->
       <div class="home-column home-right">
         <TaskPanelCard
           @edit-task="openEdit"
@@ -162,12 +159,11 @@ function onConfirmRestMove(): void {
       </div>
     </main>
 
-    <!-- 任务表单（新增 / 编辑，含「暂不安排日期」与休息日确认） -->
+    <!-- 任务表单（新增 / 编辑，含休息日确认；不再包含开始 / 结束时间） -->
     <TaskFormModal
       v-model="formOpen"
       :task="editingTask"
       :default-date="defaultDate"
-      :default-start-time="defaultStartTime"
     />
 
     <!-- 设置：界面自定义 / 数据导入导出 / 备份恢复 / 清空数据 -->

@@ -22,10 +22,14 @@ const emit = defineEmits<{
   close: []
 }>()
 
+/** 贴边回收时使用的估算尺寸（与 .day-type-menu 的实际宽度保持一致） */
+const MENU_WIDTH = 208
+const MENU_HEIGHT = 152
+
 /** 贴近视口边缘时向内收，避免菜单被裁掉 */
 const position = computed(() => {
-  const width = 168
-  const height = 148
+  const width = MENU_WIDTH
+  const height = MENU_HEIGHT
   const left = Math.max(8, Math.min(props.x, window.innerWidth - width - 8))
   const top = Math.max(8, Math.min(props.y, window.innerHeight - height - 8))
   return { left: `${left}px`, top: `${top}px` }
@@ -69,7 +73,8 @@ const position = computed(() => {
 
 .day-type-menu {
   position: fixed;
-  min-width: 168px;
+  /* 与 MENU_WIDTH 保持一致：菜单更宽，日期标题与「当前」标记不再拥挤 */
+  min-width: 208px;
   padding: var(--space-1);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
