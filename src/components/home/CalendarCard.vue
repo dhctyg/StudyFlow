@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import CalendarHeader from '../calendar/CalendarHeader.vue'
 import MonthView from '../calendar/MonthView.vue'
 import WeekView from '../calendar/WeekView.vue'
+import { nextCompactState } from '../calendar/calendarBreakpoints'
+import { useAvailableWidth } from '../../composables/useAvailableWidth'
 import type { DayType, Task } from '../../models/types'
 import { DAY_TYPE_LABEL, DAY_TYPE_ORDER } from '../../models/dayType'
 import {
@@ -42,6 +44,25 @@ const emit = defineEmits<{
 
 const isWeek = computed(() => viewMode.value === 'week')
 const isAllSubjects = computed(() => subjectFilter.value === null)
+
+/**
+ * 窄屏竖屏适配：按**日历区域的实际可用宽度**决定是否切换为紧凑日期选择器。
+ *
+ * 断点与滞回规则集中在 `calendar/calendarBreakpoints.ts`（含 620px / 680px 的推导说明）：
+ * 可用宽度不足 620px 时切到日期选择器，回到 680px 以上才切回七列，
+ * 避免窗口宽度在阈值附近变化时布局反复跳变。
+ */
+const viewRef = ref<HTMLElement | null>(null)
+const viewWidth = useAvailableWidth(viewRef)
+const isCompact = ref(false)
+
+watch(
+  viewWidth,
+  (width) => {
+    isCompact.value = nextCompactState(isCompact.value, width)
+  },
+  { immediate: true },
+)
 
 function onMoveTask(taskId: string, dateKey: string): void {
   emit('moveTask', taskId, dateKey)
@@ -113,9 +134,10 @@ function onOpenDayMenu(dateKey: string, x: number, y: number): void {
       </button>
     </div>
 
-    <div class="calendar-view">
+    <div ref="viewRef" class="calendar-view" :class="{ 'is-compact': isCompact }">
       <WeekView
         v-if="isWeek"
+        :compact="isCompact"
         @edit="emit('edit', $event)"
         @create="emit('create', $event)"
         @move-task="onMoveTask"
@@ -123,6 +145,7 @@ function onOpenDayMenu(dateKey: string, x: number, y: number): void {
       />
       <MonthView
         v-else
+        :compact="isCompact"
         @create="emit('create', $event)"
         @move-task="onMoveTask"
         @open-day-menu="onOpenDayMenu"
@@ -288,6 +311,14 @@ function onOpenDayMenu(dateKey: string, x: number, y: number): void {
   flex: 1;
   min-width: 0;
   min-height: 0;
+}
+
+/**
+ * 紧凑日期选择器模式（窄屏竖屏）：内边距收紧到 4px，
+ * 把省下的宽度留给七列日期格；仍然左右各留一点边距，选中描边不会被卡片圆角裁掉。
+ */
+.calendar-view.is-compact {
+  padding: var(--space-1);
 }
 
 @media (max-width: 1100px) {

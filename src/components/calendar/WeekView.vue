@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import CompactDatePicker from './CompactDatePicker.vue'
 import TaskCard from './TaskCard.vue'
 import WeekdayHeader from './WeekdayHeader.vue'
 import type { Task } from '../../models/types'
@@ -8,10 +9,12 @@ import {
   selectDate,
   selectedDate,
   statusOf,
+  subjectOf,
   visibleTasksOf,
   weekDays,
 } from '../../store/schedule'
 import { dayOf, todayKey } from '../../utils/date'
+import { subjectDotsOf, type PickerCell } from '../../utils/dayDots'
 import { hasTaskDrag, readTaskDragId, startTaskDrag } from '../../utils/taskDrag'
 
 /**
@@ -23,7 +26,13 @@ import { hasTaskDrag, readTaskDragId, startTaskDrag } from '../../utils/taskDrag
  * - 点击列内空白区域 → 新增任务并默认填入该日期（点击任务卡片只打开编辑，不会误触发新增）；
  * - 右键列内任意位置，或点击表头的「⋯」，都可设置日期类型（普通日 / 休息日 / 缓冲日）；
  * - 从右侧任务列表拖入任务 → 修改**原任务**的日期（不复制任务，不顺延其它任务）。
+ *
+ * `compact`（窄屏竖屏）：七列宽度不足时不再铺任务卡片，改为紧凑的**日期选择器**——
+ * 只显示日期数字与科目主题色圆点，点日期即在日任务区域查看 / 操作当天任务。
  */
+// 只用于模板渲染；脚本内不需要读取，因此不赋值给变量（避免未使用变量的检查报错）
+withDefaults(defineProps<{ compact?: boolean }>(), { compact: false })
+
 const emit = defineEmits<{
   edit: [task: Task]
   create: [dateKey: string]
@@ -61,11 +70,64 @@ const days = computed<DayColumn[]>(() =>
 )
 
 /**
+ * 紧凑日期选择器数据：与宽屏列**同源**（同一套日期键 / 选中态 / 日期类型 / 任务数据），
+ * 只把当天任务换算成「按科目去重的圆点」，不显示任何任务文字。
+ */
+const pickerCells = computed<PickerCell[]>(() =>
+  days.value.map((day) => {
+    const { dots, overflow } = subjectDotsOf(day.tasks, (id) => subjectOf(id).color)
+    return {
+      key: day.key,
+      day: day.day,
+      inMonth: true,
+      isToday: day.isToday,
+      isSelected: day.isSelected,
+      isRest: day.isRest,
+      isBuffer: day.isBuffer,
+      isComplete: day.isComplete,
+      total: day.tasks.length,
+      dots,
+      overflow,
+    }
+  }),
+)
+
+/** 日期选择器里点击日期：只切换选中日期（当天任务在日任务区域查看 / 操作） */
+function onPickerSelect(dateKey: string): void {
+  selectDate(dateKey)
+}
+
+function onPickerOpenDayMenu(dateKey: string, x: number, y: number): void {
+  emit('openDayMenu', dateKey, x, y)
+}
+
+// 拖拽改期：与宽屏日期列完全相同的判定与落点逻辑（只是换成了日期格）
+function onPickerDragOver(dateKey: string, event: DragEvent): void {
+  if (!hasTaskDrag(event)) return
+  event.preventDefault()
+  if (event.dataTransfer !== null) event.dataTransfer.dropEffect = 'move'
+  dropTarget.value = dateKey
+}
+
+function onPickerDragLeave(dateKey: string): void {
+  if (dropTarget.value === dateKey) dropTarget.value = null
+}
+
+function onPickerDrop(dateKey: string, event: DragEvent): void {
+  dropTarget.value = null
+  const taskId = readTaskDragId(event)
+  if (taskId === null) return
+  event.preventDefault()
+  emit('moveTask', taskId, dateKey)
+}
+
+/**
  * 七列等分面板宽度：`repeat(7, minmax(0, 1fr))`。
  *
  * 不再按任务内容估算列宽，也不设置最小宽度 —— 周一至周日始终完整显示在日历卡片内，
  * 任何窗口尺寸下都不会出现横向滚动条（列只会变窄，不会把内容推出卡片）。
  * 列内空间用紧凑内边距 / 字号与可换行的任务文字消化。
+ * 列宽不足以放下任务卡片时（compact = true），由父级按实际可用宽度切换为日期选择器。
  */
 
 /** 拖拽悬停的列（纯界面状态，不写入任何数据） */
@@ -114,7 +176,24 @@ function onTaskDragStart(task: Task, event: DragEvent): void {
 
 <template>
   <div class="week-view">
-    <div class="week-scroll">
+    <!--
+      窄屏竖屏（compact）：七列宽度不足以放下任务卡片时，改用紧凑日期选择器。
+      只显示日期数字 + 科目主题色圆点；点日期切换选中日期，当天任务照常在日任务区域操作。
+    -->
+    <CompactDatePicker
+      v-if="compact"
+      variant="week"
+      :cells="pickerCells"
+      :drop-target-key="dropTarget"
+      @select="onPickerSelect"
+      @open-day-menu="onPickerOpenDayMenu"
+      @drag-over="onPickerDragOver"
+      @drag-leave="onPickerDragLeave"
+      @drop="onPickerDrop"
+    />
+
+    <!-- 宽屏：保留原有七列周视图（结构与交互完全不变） -->
+    <div v-else class="week-scroll">
       <!-- 星期标题：独立圆角方框，位于日期网格上方并与列对齐（不插入日期格） -->
       <WeekdayHeader />
 

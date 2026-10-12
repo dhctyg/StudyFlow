@@ -300,6 +300,18 @@ function onConfirmRestMove(): void {
     min-height: 420px;
   }
 
+  /**
+   * 紧凑日期选择器模式（日历区域宽度不足，已切换为日期选择器）：
+   * 此时日历只剩「日期选择器」这一小块，不再需要 72vh 的工作区高度 ——
+   * 让卡片按内容收缩，下方任务面板（日任务区域）更快进入视野，少滚一次屏。
+   * 用 :has() 精确限定在「确实渲染了日期选择器」时生效；
+   * 浏览器不支持 :has() 时该规则被忽略，退回上面的 72vh，功能不受影响。
+   */
+  .home-left > .calendar-card:has(.compact-date-picker) {
+    height: auto;
+    min-height: 0;
+  }
+
   /* 任务面板：窄屏下限制高度并内部滚动 */
   .home-right > .task-panel {
     min-height: 300px;
